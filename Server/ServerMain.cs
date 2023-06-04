@@ -8,11 +8,13 @@ using CitizenFX.Core.Native;
 using static CitizenFX.Core.Native.API;
 using Newtonsoft.Json;
 using System.Dynamic;
+using System.Numerics;
 
 namespace Core.Server
 {
     public class PlayerInstance
     {
+        public string Gender { get; set; }
         public string Firstname { get; set; }
         public string Lastname { get; set; }
         public string Birth { get; set; }
@@ -36,8 +38,9 @@ namespace Core.Server
                 var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
                 if (existingPlayer != null)
                 {
+                    TriggerClientEvent("core:getGender", existingPlayer.Gender);
                     TriggerClientEvent("core:sendNotif", $"~g~Bienvenue ~w~{existingPlayer.FirstName}");
-                    TriggerClientEvent("core:getClothes", existingPlayer.Clothes);
+
                     TriggerClientEvent("core:teleportLastPosition", existingPlayer.LastPosition);
                 }
                 else
@@ -48,10 +51,26 @@ namespace Core.Server
             }
         }
 
+        [EventHandler("core:setClothes")]
+        public void SetClothes([FromSource] Player player)
+        {
+            using (var dbContext = new DataContext())
+            {
+                var networkId = player.Handle;
+                var license = player.Identifiers["license"];
+                var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
+                if (existingPlayer != null)
+                {
+                    TriggerClientEvent("core:getClothes", existingPlayer.Clothes);
+                }
+            }
+        }
+
         public void IsPlayerDisconnecting([FromSource] Player player, string reason)
         {
             using (var dbContext = new DataContext())
             {
+                Debug.WriteLine("Disconnect");
                 var license = player.Identifiers["license"];
                 var json = JsonConvert.SerializeObject(player.Character.Position);
                 var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
@@ -69,9 +88,8 @@ namespace Core.Server
             {
                 var newPlayer = new PlayerTable
                 {
-                    Id = player.Character.NetworkId,
                     License = player.Identifiers["license"],
-
+                    Gender = data.Gender,
                     FirstName = data.Firstname,
                     LastName = data.Lastname,
                     Clothes = data.Clothes,
@@ -79,7 +97,8 @@ namespace Core.Server
                 };
                 dbContext.Player.Add(newPlayer);
                 dbContext.SaveChanges();
-                TriggerClientEvent("core:sendNotif", $"Vos informations ont bien été enregistré");
+                SetPlayerRoutingBucket(player.Handle, 0);
+                TriggerClientEvent("core:sendNotif", $"Vos informations ont bien Ã©tÃ© enregistrÃ©");
             }
         }
 
@@ -96,7 +115,7 @@ namespace Core.Server
                     newClothes.Clothes = data.Clothes;
                     dbContext.SaveChanges();
                 }
-                TriggerClientEvent("core:sendNotif", $"Vos informations ont bien été enregistré");
+                TriggerClientEvent("core:sendNotif", $"Vos informations ont bien Ã©tÃ© enregistrÃ©");
             }
         }
 
