@@ -10,11 +10,13 @@ using LemonUI;
 using CitizenFX.Core.Native;
 using Mono.CSharp;
 using Newtonsoft.Json.Linq;
+using System.Text.RegularExpressions;
 
 namespace Core.Client
 {
     public class PlayerInstance
     {
+        public string Gender { get; set; }
         public string Firstname { get; set; }
         public string Lastname { get; set; }
         public string Birth { get; set; }
@@ -30,6 +32,7 @@ namespace Core.Client
 
         PlayerInstance Player = new PlayerInstance
         {
+            Gender = "",
             Firstname = "",
             Lastname = "",
             Birth = "",
@@ -40,6 +43,7 @@ namespace Core.Client
         {
             Debug.WriteLine("Hi from Core.Client!");
             EventHandlers["playerSpawned"] += new Action(OnPlayerConnecting);
+            EventHandlers["baseevents:onPlayerDied"] += new Action<int, dynamic>(OnDeath);
             Format = new Format(this);
         }
 
@@ -48,28 +52,64 @@ namespace Core.Client
             TriggerServerEvent("core:isPlayerRegistered");
         }
 
-        [EventHandler("core:getClothes")]
-        public async void GetClothes(string json)
+        public void OnDeath(int killerType, dynamic deathCoords)
         {
-            // json : {"8":{"4":0},"11":{"4":0},"3":{"1":0},"4":{"4":0},"6":{"3":0},"7":{"0":0}}
-            var model = new Model("mp_m_freemode_01");
-            RequestModel(model);
-            while (!model.IsLoaded)
+            var LocalPlayer = GetLocalPlayer();
+            Format.SendNotif("Vous Ãªtes mort");
+            SetEntityCoordsNoOffset(GetPlayerPed(-1), LocalPlayer.Character.Position.X, LocalPlayer.Character.Position.Y, LocalPlayer.Character.Position.Z, false, false, false);
+            NetworkResurrectLocalPlayer(LocalPlayer.Character.Position.X, LocalPlayer.Character.Position.Y, LocalPlayer.Character.Position.Z, LocalPlayer.Character.Heading, true, false);
+            SetPlayerInvincible(GetPlayerPed(-1), false);
+            DeathAnimation();
+        }
+
+        public async void DeathAnimation()
+        {
+            Function.Call(Hash.REQUEST_ANIM_DICT, "anim@gangops@morgue@table@");
+            while (!Function.Call<bool>(Hash.HAS_ANIM_DICT_LOADED, "anim@gangops@morgue@table@")) await BaseScript.Delay(50);
+            Game.PlayerPed.Task.ClearAllImmediately();
+            AnimationFlags flags = AnimationFlags.Loop;
+            Game.PlayerPed.Task.PlayAnimation("anim@gangops@morgue@table@", "ko_front", -1, 5000, flags);
+            ClearPedBloodDamage(GetPlayerPed(-1));
+        }
+
+        [EventHandler("core:getGender")]
+        public async void GetGender(string gender)
+        {
+            if (gender == "Femme")
             {
-                await Delay(0);
+                var modelMale = new Model(PedHash.FreemodeFemale01);
+                RequestModel(modelMale);
+                while (!modelMale.IsLoaded)
+                {
+                    await Delay(0);
+                }
+                if (IsModelInCdimage(modelMale) && IsModelValid(modelMale))
+                {
+                    SetPlayerModel(PlayerId(), modelMale);
+                    SetPedDefaultComponentVariation(GetPlayerPed(-1));
+                    TriggerServerEvent("core:setClothes");
+                }
             }
-
-            if (IsModelInCdimage(model) && IsModelValid(model))
+            else
             {
-                SetPlayerModel(PlayerId(), model);
-                SetPedDefaultComponentVariation(GetPlayerPed(-1));
+                var modelFemale = new Model(PedHash.FreemodeMale01);
+                RequestModel(modelFemale);
+                while (!modelFemale.IsLoaded)
+                {
+                    await Delay(0);
+                }
+                if (IsModelInCdimage(modelFemale) && IsModelValid(modelFemale))
+                {
+                    SetPlayerModel(PlayerId(), modelFemale);
+                    SetPedDefaultComponentVariation(GetPlayerPed(-1));
+                    TriggerServerEvent("core:setClothes");
+                }
             }
+        }
 
-            await Game.Player.ChangeModel(model);
-            model.Request();
-            API.SetPedComponentVariation(GetPlayerPed(-1), 1, 1, 1, 0);
-            Debug.WriteLine($"{json}");
-
+        [EventHandler("core:getClothes")]
+        public void GetClothes(string json)
+        {
             JObject jsonObject = JObject.Parse(json);
             var properties = jsonObject.Properties();
 
@@ -84,13 +124,12 @@ namespace Core.Client
                     {
                         var subKey = subProperty.Name;
                         var subValue = (int)subProperty.Value;
+                        Debug.WriteLine($"{property.Name} {subKey} {subValue}");
                         DressPed(int.Parse(property.Name), int.Parse(subKey), subValue);
                     }
                 }
             }
-            TriggerServerEvent("core:getLastPosition");
         }
-
 
         public void DressPed(int componentId, int drawableId, int textureId)
         {
@@ -113,7 +152,6 @@ namespace Core.Client
         [EventHandler("core:createCharacter")]
         public void CreateCharacter()
         {
-            Delay(8000);
             SetEntityCoords(GetPlayerPed(-1), dressPos.X, dressPos.Y, dressPos.Z, true, false, false, true);
             CharacterMenu();
         }
@@ -132,30 +170,65 @@ namespace Core.Client
                 SetPlayerModel(PlayerId(), model);
                 SetPedDefaultComponentVariation(GetPlayerPed(-1));
             }
-            var menu = new NativeMenu("Création")
+            var menu = new NativeMenu("CrÃ©ation")
             {
                 Visible = true,
                 UseMouse = false,
                 AcceptsInput = true
             };
 
-            var firstnameItem = new NativeItem("Prénom");
+            var genderItem = new NativeListItem<string>("Genre", "", "Homme", "Femme");
+            var firstnameItem = new NativeItem("PrÃ©nom");
             var lastnameItem = new NativeItem("Nom");
             var birthItem = new NativeItem("Date de naissance");
             var submit = new NativeItem("Envoyer");
 
+            menu.Add(genderItem);
             menu.Add(firstnameItem);
             menu.Add(lastnameItem);
             menu.Add(birthItem);
             menu.Add(submit);
 
+            string gender = "";
             string firstname = "";
             string lastname = "";
             string birth = "";
 
+            genderItem.ItemChanged += async (sender, e) =>
+            {
+                gender = genderItem.SelectedItem;
+                if (genderItem.SelectedItem == "Femme")
+                {
+                    var modelMale = new Model(PedHash.FreemodeFemale01);
+                    RequestModel(modelMale);
+                    while (!modelMale.IsLoaded)
+                    {
+                        await Delay(0);
+                    }
+                    if (IsModelInCdimage(modelMale) && IsModelValid(modelMale))
+                    {
+                        SetPlayerModel(PlayerId(), modelMale);
+                        SetPedDefaultComponentVariation(GetPlayerPed(-1));
+                    }
+                } else
+                {
+                    var modelFemale = new Model(PedHash.FreemodeMale01);
+                    RequestModel(modelFemale);
+                    while (!modelFemale.IsLoaded)
+                    {
+                        await Delay(0);
+                    }
+                    if (IsModelInCdimage(modelFemale) && IsModelValid(modelFemale))
+                    {
+                        SetPlayerModel(PlayerId(), modelFemale);
+                        SetPedDefaultComponentVariation(GetPlayerPed(-1));
+                    }
+                } 
+            };
+
             firstnameItem.Activated += async (sender, e) =>
             {
-                var textInput = await Format.GetUserInput("Prénom", "", 20);
+                var textInput = await Format.GetUserInput("PrÃ©nom", "", 20);
                 firstnameItem.AltTitle = textInput;
                 firstname = textInput;
             };
@@ -170,26 +243,39 @@ namespace Core.Client
             birthItem.Activated += async (sender, e) =>
             {
                 var textInput = await Format.GetUserInput("Date de naissance", "20/04/1889", 20);
-                birthItem.AltTitle = textInput;
-                birth = textInput;
+                if (IsValidDateFormat(textInput))
+                {
+                    birthItem.AltTitle = textInput;
+                    birth = textInput;
+                }
             };
 
             submit.Activated += (sender, e) =>
             {
                 menu.Visible = false;
-                Format.CustomNotif("Vos informations ont bien été enregistré");
+                Format.CustomNotif("Vos informations ont bien Ã©tÃ© enregistrÃ©");
                 DressMenu();
+                Player.Gender = gender;
                 Player.Firstname = firstname;
                 Player.Lastname = lastname;
                 Player.Birth = birth;
             };
 
-            menu.Closing += (sender, e) =>
-            {
-                menu.Visible = true;
+            menu.Closing += (sender, e) => {
+                if (string.IsNullOrEmpty(firstname) || string.IsNullOrEmpty(lastname) || string.IsNullOrEmpty(birth))
+                {
+                    e.Cancel = true;
+                    Format.CustomNotif("Vous devez renseigner toutes les informations");
+                }
             };
 
             Pool.Add(menu);
+        }
+
+        private bool IsValidDateFormat(string date)
+        {
+            var regex = new Regex(@"^\d{2}/\d{2}/\d{4}$");
+            return regex.IsMatch(date);
         }
 
 
@@ -199,38 +285,68 @@ namespace Core.Client
             DressMenu();
         }
 
+        private void ChangeHair()
+        {
+            var menu = new NativeMenu("Coiffures")
+            {
+                Visible = true,
+                UseMouse = false,
+                HeldTime = 100
+            };
+
+            var hairItem = new NativeListItem<int>("Cheveux", 0);
+            
+            for (int i = 0; i <= GetNumHairColors(); i++)
+            {
+                hairItem.Items.Add(i);
+            }
+            var colorItem = new NativeListItem<int>("Couleur", 0);
+            for (int i = 1; i <= GetNumHairColors(); i++)
+            {
+                colorItem.Items.Add(i);
+            }
+
+            menu.Add(hairItem);
+            menu.Add(colorItem);
+
+            Pool.Add(menu);
+
+            hairItem.ItemChanged += (sender, e) =>
+            {
+                ChangeHair(hairItem.SelectedIndex, colorItem.SelectedIndex);
+            };
+
+            colorItem.ItemChanged += (sender, e) =>
+            {
+                ChangeHair(hairItem.SelectedIndex, colorItem.SelectedIndex);
+            };
+        }
+
+        private void ChangeHair(int hair, int color)
+        {
+            var ped = Game.PlayerPed.Handle;
+
+            SetPedComponentVariation(ped, 2, hair, color, 0);
+            SetPedHairColor(ped, color, 1);
+        }
+
         public void DressMenu()
         {
-            var model = new Model(PedHash.FreemodeMale01);
-            model.Request();
-            Game.Player.ChangeModel(model);
-            Delay(3000);
             var ped = PlayerPedId();
-            var menu = new NativeMenu("Garde robe", "Choisissez vos vêtements");
+            var menu = new NativeMenu("Garde robe", "Choisissez vos vÃªtements");
             Pool.Add(menu);
             menu.Visible = true;
             menu.UseMouse = false;
             menu.HeldTime = 100;
             menu.AcceptsInput = true;
-
-            /*
-             * 0: Face, 1: Mask, 2: Hair, 3: Torso, 4: Leg,
-             * 5: Parachute, bag, 6: Shoes, 7: Accessory,
-             * 8: Undershirt, 9: Kevlar, 10: Badge, 11: Torso-2
-             */
-
-            // var jsonClothes = "{clothes:[8:{1,1}, 11:{2,2}, 3:{3,3}, 4:{4,4}, 6:{6,6}, 7:{7,7}]}";
-
             var componentDict = new Dictionary<int, string>()
             {
-                // { 1, "Masque" },
                 { 8, "Sous haut" },
                 { 11, "Haut" },
                 { 3, "Bras" },
                 { 4, "Bas" },
                 { 6, "Chaussures" },
                 { 7, "Accessoires" }
-                //{ 5, "Sacs" }
             };
 
             foreach (var clothes in componentDict)
@@ -288,9 +404,15 @@ namespace Core.Client
         public Task OnTick()
         {
             Pool.Process();
+            
+            if (IsControlJustPressed(0, 167))
+            {
+                ChangeHair();
+            }
             return Task.FromResult(0);
         }
 
+        public Player GetLocalPlayer() => this.LocalPlayer;
         public bool IsPedMale() => IsPedModel(PlayerPedId(), (uint)PedHash.FreemodeMale01);
     }
 }
