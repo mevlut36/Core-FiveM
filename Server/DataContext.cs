@@ -27,6 +27,8 @@ namespace Core.Server
         public int Id { get; set; }
         [Column("license")]
         public string License { get; set; }
+        [Column("gender")]
+        public string Gender { get; set; }
         [Column("firstname")]
         public string FirstName { get; set; }
         [Column("lastname")]
@@ -35,6 +37,8 @@ namespace Core.Server
         public string Clothes { get; set; }
         [Column("money")]
         public int Money { get; set; }
+        [Column("cars")]
+        public string Cars { get; set; }
         [Column("phone")]
         public string Phone { get; set; }
         [Column("inventory")]
