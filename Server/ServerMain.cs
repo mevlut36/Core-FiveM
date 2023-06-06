@@ -9,6 +9,7 @@ using static CitizenFX.Core.Native.API;
 using Newtonsoft.Json;
 using System.Dynamic;
 using System.Numerics;
+using System.Text;
 
 namespace Core.Server
 {
@@ -19,6 +20,15 @@ namespace Core.Server
         public string Lastname { get; set; }
         public string Birth { get; set; }
         public string Clothes { get; set; }
+    }
+    public class VehicleInfo
+    {
+        public string Model { get; set; }
+        public string Plate { get; set; }
+        public int EngineLevel { get; set; }
+        public int BrakeLevel { get; set; }
+        public int ColorPrimary { get; set; }
+        public int ColorSecondary { get; set; }
     }
     public class ServerMain : BaseScript
     {
@@ -34,18 +44,18 @@ namespace Core.Server
             using (var dbContext = new DataContext())
             {
                 var networkId = player.Handle;
+                var playerPed = GetPlayerPed(networkId);
                 var license = player.Identifiers["license"];
                 var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
                 if (existingPlayer != null)
                 {
-                    TriggerClientEvent("core:getGender", existingPlayer.Gender);
-                    TriggerClientEvent("core:sendNotif", $"~g~Bienvenue ~w~{existingPlayer.FirstName}");
-
-                    TriggerClientEvent("core:teleportLastPosition", existingPlayer.LastPosition);
+                    TriggerClientEvent(player, "core:getGender", existingPlayer.Gender);
+                    TriggerClientEvent(player, "core:sendNotif", $"~g~Bienvenue ~w~{existingPlayer.FirstName}");
+                    TriggerClientEvent(player, "core:teleportLastPosition", existingPlayer.LastPosition);
                 }
                 else
                 {
-                    TriggerClientEvent("core:createCharacter");
+                    TriggerClientEvent(player, "core:createCharacter");
                     SetPlayerRoutingBucket(player.Handle, Int32.Parse(networkId));
                 }
             }
@@ -57,27 +67,14 @@ namespace Core.Server
             using (var dbContext = new DataContext())
             {
                 var networkId = player.Handle;
+                var playerPed = GetPlayerPed(networkId);
                 var license = player.Identifiers["license"];
                 var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
                 if (existingPlayer != null)
                 {
-                    TriggerClientEvent("core:getClothes", existingPlayer.Clothes);
+                    TriggerClientEvent(player, "core:getClothes", existingPlayer.Clothes, existingPlayer.Gender);
                 }
             }
-        }
-
-        public void IsPlayerDisconnecting([FromSource] Player player, string reason)
-        {
-            using (var dbContext = new DataContext())
-            {
-                Debug.WriteLine("Disconnect");
-                var license = player.Identifiers["license"];
-                var json = JsonConvert.SerializeObject(player.Character.Position);
-                var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
-                existingPlayer.LastPosition = json;
-                dbContext.SaveChanges();
-            }
-            Debug.WriteLine($"{player.Name} disconnected");
         }
 
         [EventHandler("core:sendPlayerData")]
@@ -98,7 +95,7 @@ namespace Core.Server
                 dbContext.Player.Add(newPlayer);
                 dbContext.SaveChanges();
                 SetPlayerRoutingBucket(player.Handle, 0);
-                TriggerClientEvent("core:sendNotif", $"Vos informations ont bien été enregistré");
+                TriggerClientEvent(player, "core:sendNotif", $"Vos informations ont bien été enregistré");
             }
         }
 
@@ -108,14 +105,78 @@ namespace Core.Server
             var data = JsonConvert.DeserializeObject<PlayerInstance>(json);
             using (var dbContext = new DataContext())
             {
-                var newClothes = dbContext.Player.SingleOrDefault(a => a.License == player.Identifiers["license"]);
+                var newClothes = dbContext.Player.FirstOrDefault(a => a.License == player.Identifiers["license"]);
 
                 if (newClothes != null)
                 {
                     newClothes.Clothes = data.Clothes;
                     dbContext.SaveChanges();
                 }
-                TriggerClientEvent("core:sendNotif", $"Vos informations ont bien été enregistré");
+                TriggerClientEvent(player, "core:sendNotif", $"Vos informations ont bien été enregistré", newClothes.License);
+            }
+        }
+        
+        public void IsPlayerDisconnecting([FromSource] Player player, string reason)
+        {
+            using (var dbContext = new DataContext())
+            {
+                var license = player.Identifiers["license"];
+                var json = JsonConvert.SerializeObject(player.Character.Position);
+                var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
+                existingPlayer.LastPosition = json;
+                dbContext.SaveChanges();
+            }
+            Debug.WriteLine($"{player.Name} disconnected");
+        }
+
+        [EventHandler("core:sendVehicleInfo")]
+        public void SendVehicleInfo([FromSource] Player player, string json)
+        {
+            var data = JsonConvert.DeserializeObject<List<VehicleInfo>>(json);
+            var license = player.Identifiers["license"];
+            using (var dbContext = new DataContext())
+            {
+                var existingPlayer = dbContext.Player.FirstOrDefault(a => a.License == license);
+
+                if (existingPlayer != null)
+                {
+                    List<VehicleInfo> cars;
+                    if (!string.IsNullOrEmpty(existingPlayer.Cars))
+                    {
+                        cars = JsonConvert.DeserializeObject<List<VehicleInfo>>(existingPlayer.Cars);
+                    }
+                    else
+                    {
+                        cars = new List<VehicleInfo>();
+                    }
+
+                    cars.AddRange(data);
+
+                    existingPlayer.Cars = JsonConvert.SerializeObject(cars);
+                    dbContext.SaveChanges();
+                }
+
+                TriggerClientEvent(player, "core:sendNotif", "Vos informations ont bien été enregistrées", existingPlayer.License);
+            }
+        }
+
+
+
+        [EventHandler("core:getVehicleInfo")]
+        public void GetVehicleInfo([FromSource] Player player)
+        {
+            var license = player.Identifiers["license"];
+            var networkId = player.Handle;
+            var playerPed = GetPlayerPed(networkId);
+            using (var dbContext = new DataContext())
+            {
+                var existingPlayer = dbContext.Player.FirstOrDefault(u => u.License == license);
+
+                if (existingPlayer != null)
+                {
+                    string json = existingPlayer.Cars;
+                    TriggerClientEvent(player, "core:sendVehicleInfos", json, playerPed);
+                }
             }
         }
 
