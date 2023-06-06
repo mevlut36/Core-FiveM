@@ -82,7 +82,6 @@ namespace Core.Client
         [EventHandler("core:getGender")]
         public async void GetGender(string gender)
         {
-            var LocalPlayer = GetLocalPlayer();
             var pedHash = gender == "Femme" ? PedHash.FreemodeFemale01 : PedHash.FreemodeMale01;
             var model = new Model(pedHash);
             RequestModel(model);
