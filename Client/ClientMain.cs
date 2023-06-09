@@ -1,454 +1,285 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using CitizenFX.Core;
-using static CitizenFX.Core.Native.API;
-using Newtonsoft.Json;
-using System.Collections.Generic;
-using LemonUI.Menus;
-using System.Linq;
 using LemonUI;
-using CitizenFX.Core.Native;
-using Mono.CSharp;
-using Newtonsoft.Json.Linq;
-using System.Text.RegularExpressions;
-using System.Drawing;
+using LemonUI.Menus;
+using Newtonsoft.Json;
+using static CitizenFX.Core.Native.API;
 
 namespace Core.Client
 {
-    public class PlayerInstance
-    {
-        public string Gender { get; set; }
-        public string Firstname { get; set; }
-        public string Lastname { get; set; }
-        public string Birth { get; set; }
-        public string Clothes { get; set; }
-    }
-
-    public class ClientMain : BaseScript
+    public class PlayerMenu
     {
         public Format Format;
-        public ObjectPool Pool = new ObjectPool();
+        public ClientMain Client;
+        public ObjectPool Pool;
         public Parking Parking;
-        public Vector3 dressPos = new Vector3(151.1f, -751.4f, 258.1f);
-        public string Result = "";
 
-        PlayerInstance Player = new PlayerInstance
+        public PlayerMenu(ClientMain caller)
         {
-            Gender = "",
+            Client = caller;
+            Pool = caller.Pool;
+            Format = caller.Format;
+            Parking = caller.Parking;
+        }
+
+        public PlayerInstance PlayerInst = new PlayerInstance
+        {
             Firstname = "",
             Lastname = "",
+            Bitcoin = 0,
             Birth = "",
-            Clothes = ""
+            Clothes = "",
+            Money = 0,
+            Bills = "",
+            Inventory = ""
         };
 
-        public ClientMain()
+        public void F5Menu()
         {
-            Debug.WriteLine("Hi from Core.Client!");
-            EventHandlers["playerSpawned"] += new Action(OnPlayerConnecting);
-            EventHandlers["baseevents:onPlayerDied"] += new Action<int, dynamic>(OnDeath);
-            Format = new Format(this);
-            Parking = new Parking(this);
-            Parking.RegisterAllEvents();
-        }
-
-        public void OnPlayerConnecting()
-        {
-            TriggerServerEvent("core:isPlayerRegistered");
-        }
-
-        public void OnDeath(int playerId, dynamic deathCoords)
-        {
-            if (playerId != PlayerId())
-                return;
-
-            var LocalPlayer = GetLocalPlayer();
-            Format.SendNotif("Vous êtes mort");
-            SetEntityCoordsNoOffset(GetPlayerPed(-1), LocalPlayer.Character.Position.X, LocalPlayer.Character.Position.Y, LocalPlayer.Character.Position.Z, false, false, false);
-            NetworkResurrectLocalPlayer(LocalPlayer.Character.Position.X, LocalPlayer.Character.Position.Y, LocalPlayer.Character.Position.Z, LocalPlayer.Character.Heading, true, false);
-            SetPlayerInvincible(GetPlayerPed(-1), false);
-            DeathAnimation();
-        }
-
-        public async void DeathAnimation()
-        {
-            Function.Call(Hash.REQUEST_ANIM_DICT, "anim@gangops@morgue@table@");
-            while (!Function.Call<bool>(Hash.HAS_ANIM_DICT_LOADED, "anim@gangops@morgue@table@")) await BaseScript.Delay(50);
-            Game.PlayerPed.Task.ClearAllImmediately();
-            AnimationFlags flags = AnimationFlags.Loop;
-            Game.PlayerPed.Task.PlayAnimation("anim@gangops@morgue@table@", "ko_front", -1, 5000, flags);
-            ClearPedBloodDamage(GetPlayerPed(-1));
-        }
-
-        [EventHandler("core:getGender")]
-        public async void GetGender(string gender)
-        {
-            var pedHash = gender == "Femme" ? PedHash.FreemodeFemale01 : PedHash.FreemodeMale01;
-            var model = new Model(pedHash);
-            RequestModel(model);
-            while (!model.IsLoaded)
+            if (IsControlPressed(0, 166))
             {
-                await Delay(0);
-            }
-            if (IsModelInCdimage(model) && IsModelValid(model))
-            {
-                LocalPlayer.ChangeModel(model);
-                SetPedDefaultComponentVariation(LocalPlayer.Character.Handle);
-                TriggerServerEvent("core:setClothes");
-            }
-        }
-
-
-        [EventHandler("core:getClothes")]
-        public void GetClothes(string json, string gender)
-        {
-            JObject jsonObject = JObject.Parse(json);
-            var properties = jsonObject.Properties();
-            var pedHash = gender == "Femme" ? PedHash.FreemodeFemale01 : PedHash.FreemodeMale01;
-            var model = new Model(pedHash);
-            RequestModel(model);
-            LocalPlayer.ChangeModel(model);
-            SetPedDefaultComponentVariation(LocalPlayer.Character.Handle);
-            foreach (var property in properties)
-            {
-                if (property.Value is JObject valueObject)
+                var mainMenu = new NativeMenu("F5", "Menu personnel")
                 {
-                    var subProperties = valueObject.Properties();
-                    foreach (var subProperty in subProperties)
-                    {
-                        var subKey = subProperty.Name;
-                        var subValue = (int)subProperty.Value;
-                        DressPed(int.Parse(property.Name), int.Parse(subKey), subValue);
-                    }
-                }
-            }
-        }
-
-        public void DressPed(int componentId, int drawableId, int textureId)
-        {
-            SetPedComponentVariation(GetPlayerPed(-1), componentId, drawableId, textureId, 0);
-        }
-
-        [EventHandler("core:teleportLastPosition")]
-        public void TeleportLastPosition(string json)
-        {
-            var coords = JsonConvert.DeserializeObject<Vector3>(json);
-            Game.PlayerPed.Position = coords;
-        }
-
-        [EventHandler("core:sendNotif")]
-        public void ServerSendNotif(string text)
-        {
-            Format.SendNotif(text);
-        }
-
-        [EventHandler("core:createCharacter")]
-        public void CreateCharacter()
-        {
-            Game.PlayerPed.Position = dressPos;
-            CharacterMenu();
-        }
-
-        public async void CharacterMenu()
-        {
-            var model = new Model("mp_m_freemode_01");
-            RequestModel(model);
-            while (!model.IsLoaded)
-            {
-                await Delay(0);
-            }
-
-            if (IsModelInCdimage(model) && IsModelValid(model))
-            {
-                SetPlayerModel(PlayerId(), model);
-                SetPedDefaultComponentVariation(GetPlayerPed(-1));
-            }
-            var menu = new NativeMenu("Création")
-            {
-                Visible = true,
-                UseMouse = false,
-                AcceptsInput = true
-            };
-
-            var genderItem = new NativeListItem<string>("Genre", "", "Homme", "Femme");
-            var firstnameItem = new NativeItem("Prénom");
-            var lastnameItem = new NativeItem("Nom");
-            var birthItem = new NativeItem("Date de naissance");
-            var submit = new NativeItem("Envoyer");
-
-            menu.Add(genderItem);
-            menu.Add(firstnameItem);
-            menu.Add(lastnameItem);
-            menu.Add(birthItem);
-            menu.Add(submit);
-
-            string gender = "Homme";
-            string firstname = "";
-            string lastname = "";
-            string birth = "";
-
-            genderItem.ItemChanged += async (sender, e) =>
-            {
-                gender = genderItem.SelectedItem;
-                if (genderItem.SelectedItem == "Femme")
-                {
-                    var modelMale = new Model(PedHash.FreemodeFemale01);
-                    RequestModel(modelMale);
-                    while (!modelMale.IsLoaded)
-                    {
-                        await Delay(0);
-                    }
-                    if (IsModelInCdimage(modelMale) && IsModelValid(modelMale))
-                    {
-                        SetPlayerModel(PlayerId(), modelMale);
-                        SetPedDefaultComponentVariation(GetPlayerPed(-1));
-                    }
-                } else
-                {
-                    var modelFemale = new Model(PedHash.FreemodeMale01);
-                    RequestModel(modelFemale);
-                    while (!modelFemale.IsLoaded)
-                    {
-                        await Delay(0);
-                    }
-                    if (IsModelInCdimage(modelFemale) && IsModelValid(modelFemale))
-                    {
-                        SetPlayerModel(PlayerId(), modelFemale);
-                        SetPedDefaultComponentVariation(GetPlayerPed(-1));
-                    }
-                } 
-            };
-
-            firstnameItem.Activated += async (sender, e) =>
-            {
-                var textInput = await Format.GetUserInput("Prénom", "", 20);
-                firstnameItem.AltTitle = textInput;
-                firstname = textInput;
-            };
-
-            lastnameItem.Activated += async (sender, e) =>
-            {
-                var textInput = await Format.GetUserInput("Nom", "", 20);
-                lastnameItem.AltTitle = textInput;
-                lastname = textInput;
-            };
-
-            birthItem.Activated += async (sender, e) =>
-            {
-                var textInput = await Format.GetUserInput("Date de naissance", "20/04/1889", 20);
-                if (Format.IsValidDateFormat(textInput))
-                {
-                    birthItem.AltTitle = textInput;
-                    birth = textInput;
-                } else
-                {
-                    Format.CustomNotif("Le format n'est pas valide");
-                }
-            };
-
-            submit.Activated += (sender, e) =>
-            {
-                menu.Visible = false;
-                Pool.Remove(menu);
-                Format.CustomNotif("Vos informations ont bien été enregistré");
-                
-                Player.Gender = gender;
-                Player.Firstname = firstname;
-                Player.Lastname = lastname;
-                Player.Birth = birth;
-                DressMenu();
-            };
-
-            menu.Closing += (sender, e) => {
-                if (string.IsNullOrEmpty(firstname) || string.IsNullOrEmpty(lastname) || string.IsNullOrEmpty(birth))
-                {
-                    e.Cancel = true;
-                    Format.CustomNotif("Vous devez renseigner toutes les informations");
-                }
-            };
-
-            Pool.Add(menu);
-        }
-
-        [EventHandler("core:createSkin")]
-        public void CreateSkin()
-        {
-            DressMenu();
-        }
-
-        private void ChangeHair()
-        {
-            var ped = Game.PlayerPed.Handle;
-            var menu = new NativeMenu("Coiffures")
-            {
-                Visible = true,
-                UseMouse = false,
-                HeldTime = 100
-            };
-
-            var hairItem = new NativeListItem<int>("Cheveux", 0);
-            
-            for (int i = 0; i <= GetNumHairColors(); i++)
-            {
-                hairItem.Items.Add(i);
-            }
-            var colorItem = new NativeListItem<int>("Couleur", 0);
-            for (int i = 1; i <= GetNumHairColors(); i++)
-            {
-                colorItem.Items.Add(i);
-            }
-
-            menu.Add(hairItem);
-            menu.Add(colorItem);
-
-            Pool.Add(menu);
-
-            hairItem.ItemChanged += (sender, e) =>
-            {
-                SetPedComponentVariation(ped, 2, hairItem.SelectedIndex, colorItem.SelectedIndex, 0);
-                SetPedHairColor(ped, colorItem.SelectedIndex, 1);
-            };
-
-            colorItem.ItemChanged += (sender, e) =>
-            {
-                SetPedComponentVariation(ped, 2, hairItem.SelectedIndex, colorItem.SelectedIndex, 0);
-                SetPedHairColor(ped, colorItem.SelectedIndex, 1);
-            };
-        }
-
-        public void DressMenu()
-        {
-            var ped = PlayerPedId();
-            var menu = new NativeMenu("Garde robe", "Choisissez vos vêtements");
-            Pool.Add(menu);
-            menu.Visible = true;
-            menu.UseMouse = false;
-            menu.HeldTime = 100;
-            menu.AcceptsInput = true;
-            var componentDict = new Dictionary<int, string>()
-            {
-                { 8, "Sous haut" },
-                { 11, "Haut" },
-                { 3, "Bras" },
-                { 4, "Bas" },
-                { 6, "Chaussures" },
-                { 7, "Accessoires" }
-            };
-
-            foreach (var clothes in componentDict)
-            {
-                var itemDrawableList = Enumerable.Range(0, GetNumberOfPedDrawableVariations(GetPlayerPed(-1), clothes.Key)).ToList();
-                NativeListItem<int> itemDrawable = new NativeListItem<int>(clothes.Value, itemDrawableList.ToArray());
-                menu.Add(itemDrawable);
-
-                var itemTextureList = Enumerable.Range(0, GetNumberOfPedTextureVariations(GetPlayerPed(-1), clothes.Key, itemDrawable.SelectedIndex)).ToList();
-                NativeListItem<int> itemTexture = new NativeListItem<int>($"~h~Texture~s~ {clothes.Value}", itemTextureList.ToArray());
-                menu.Add(itemTexture);
-
-                itemDrawable.ItemChanged += (sender, e) =>
-                {
-                    SetPedComponentVariation(GetPlayerPed(-1), clothes.Key, itemDrawable.SelectedIndex, 0, 1);
-                    itemTexture.SelectedIndex = 0;
+                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
+                    Visible = true,
+                    UseMouse = false
                 };
 
-                itemTexture.ItemChanged += (sender, e) =>
+                var shopMenu = new NativeMenu("Boutique", "~o~Boutique")
                 {
-                    SetPedComponentVariation(GetPlayerPed(-1), clothes.Key, itemDrawable.SelectedIndex, itemTexture.SelectedIndex, 1);
+                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
+                    UseMouse = false
                 };
-            }
+                shopMenu.Add(new NativeItem("[V.I.P] Aucun"));
+                shopMenu.Add(new NativeItem($"Bitcoins: {PlayerInst.Bitcoin}"));
 
-            var submit = new NativeItem("Envoyer");
-            menu.Add(submit);
-
-            submit.Activated += (sender, e) =>
-            {
-                var clothesDict = new Dictionary<int, Dictionary<int, int>>();
-                foreach (var clothes in componentDict)
+                var vip = new NativeMenu("VIP", "VIP")
                 {
-                    var itemDrawable = menu.Items.OfType<NativeListItem<int>>().FirstOrDefault(item => item.Title == clothes.Value);
-                    var itemTexture = menu.Items.OfType<NativeListItem<int>>().FirstOrDefault(item => item.Title == $"~h~Texture~s~ {clothes.Value}");
+                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
+                    UseMouse = false
+                };
+                var vip_1 = new NativeItem("~f~~h~VIP~h~", "", "~g~500~w~ Bitcoins /mois");
+                var vip_2 = new NativeItem("~y~~h~VIP+~h~", "", "~g~700~w~ Bitcoins /mois");
+                var vip_3 = new NativeItem("~q~~h~MVP~h~", "", "~g~1000~w~ Bitcoins /mois");
+                vip.Add(vip_1);
+                vip.Add(vip_2);
+                vip.Add(vip_3);
+                shopMenu.AddSubMenu(vip);
 
-                    if (itemDrawable != null && itemTexture != null)
+                var carImport = new NativeMenu("Véhicules import", "Véhicules import")
+                {
+                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
+                    UseMouse = false
+                };
+                VehicleImport[] values = (VehicleImport[])Enum.GetValues(typeof(VehicleImport));
+
+                foreach (VehicleImport vehicle in values)
+                {
+                    DisplayAttribute displayAttribute = Format.GetDisplayAttribute(vehicle);
+                    var vehicleItem = new NativeItem($"{displayAttribute.Name}", "", $"~y~{displayAttribute.Price} BTC");
+                    carImport.Add(vehicleItem);
+                    vehicleItem.Activated += async (sender, args) =>
                     {
-                        int selectedDrawableIndex = itemDrawable.SelectedIndex;
-                        int selectedTextureIndex = itemTexture.SelectedIndex;
+                        BaseScript.TriggerServerEvent("core:bitcoinTransaction", displayAttribute.Price);
+                        var vehicleImport = await World.CreateVehicle(new Model(GetHashKey(displayAttribute.VehicleName)), GetEntityCoords(GetPlayerPed(-1), true));
+                        Parking.SendVehicleInfo(vehicleImport);
+                        BaseScript.TriggerServerEvent("core:getVehicleInfo");
+                    };
+                }
+                shopMenu.AddSubMenu(carImport);
 
-                        clothesDict.Add(clothes.Key, new Dictionary<int, int>
+                var lootbox = new NativeMenu("Caisse du mois", "Caisse du mois")
+                {
+                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
+                    UseMouse = false
+                };
+                shopMenu.AddSubMenu(lootbox);
+
+                Pool.Add(vip);
+                Pool.Add(carImport);
+                Pool.Add(lootbox);
+
+                var menuInfo = new NativeMenu("Informations", "Informations")
+                {
+                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
+                    UseMouse = false
+                };
+                menuInfo.Add(new NativeItem($"~g~${PlayerInst.Money}"));
+                menuInfo.Add(new NativeItem($"{PlayerInst.Firstname} {PlayerInst.Lastname}"));
+                menuInfo.Add(new NativeItem($"Né le {PlayerInst.Birth}"));
+
+                var inventoryMenu = new NativeMenu("Inventaire", "Inventaire")
+                {
+                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
+                    UseMouse = false
+                };
+                var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerInst.Inventory);
+                if (items != null)
+                {
+                    foreach (var item in items)
+                    {
+                        if (item != null && item.Item != null)
                         {
-                            { selectedDrawableIndex, selectedTextureIndex }
-                        });
+                            var invItem = new NativeListItem<string>($"{item.Item} ({item.Quantity})", "", "Utiliser", "Donner");
+                            inventoryMenu.Add(invItem);
+                            invItem.Activated += (sender, e) =>
+                            {
+                                ItemAction(invItem.SelectedItem, item.Item);
+                            };
+                        }
                     }
                 }
 
-                string jsonClothes = JsonConvert.SerializeObject(clothesDict);
-                Player.Clothes = jsonClothes;
-
-                string json = JsonConvert.SerializeObject(Player);
-                TriggerServerEvent("core:sendPlayerData", json);
-                SetEntityCoords(GetPlayerPed(-1), -283.2f, -939.4f, 31.2f, true, false, false, true);
-                menu.Visible = false;
-                Pool.Remove(menu);
-            };
-
-            menu.Closing += (sender, e) =>
-            {
-                e.Cancel = true;
-            };
-        }
-
-        [EventHandler("core:getCarInformation")]
-        public void GetCarInformation()
-        {
-            Vehicle vehicle = GetLocalPlayer().Character.CurrentVehicle;
-
-            if (vehicle != null)
-            {
-                string modelName = GetDisplayNameFromVehicleModel(vehicle.Model);
-                string licensePlate = GetVehicleNumberPlateText(vehicle.Handle);
-                int engineLevel = GetVehicleMod(vehicle.Handle, 11);
-                int brakeLevel = GetVehicleMod(vehicle.Handle, 12);
-                var carInfo = new
+                var clothMenu = new NativeMenu("Vêtements", "Vêtements")
                 {
-                    Model = modelName,
-                    LicensePlate = licensePlate,
-                    EngineLevel = engineLevel,
-                    BrakeLevel = brakeLevel,
+                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
+                    UseMouse = false
                 };
 
-                string json = JsonConvert.SerializeObject(carInfo);
-                TriggerServerEvent("core:receiveCarInformation", json);
+                var billsMenu = new NativeMenu("Factures", "Factures")
+                {
+                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
+                    UseMouse = false
+                };
+                var bills = JsonConvert.DeserializeObject<List<Bills>>(PlayerInst.Bills);
+                if (bills != null)
+                {
+                    foreach (var billsItem in bills)
+                    {
+                        var billItem = new NativeItem($"{billsItem.Company}", $"Par {billsItem.Author} le {billsItem.Date}", $"~g~${billsItem.Amount}");
+                        billsMenu.Add(billItem);
+                        billItem.Activated += (sender, e) =>
+                        {
+                            var selectedBill = bills.FirstOrDefault(b => b.Company == billsItem.Company && b.Amount == billsItem.Amount);
+                            if (selectedBill != null)
+                            {
+                                if (PlayerInst.Money >= billsItem.Amount)
+                                {
+                                    bills.Remove(selectedBill);
+                                    billsMenu.Remove(billItem);
+                                    BaseScript.TriggerServerEvent("core:payBill", billsItem.Company, billsItem.Amount);
+                                }
+                                else
+                                {
+                                    Format.SendNotif("Tu n'as pas assez d'~r~argent...");
+                                }
+                            }
+                        };
+                    }
+                }
+
+                var carMenu = new NativeMenu("Gestion du véhicule", "Gestion du véhicule")
+                {
+                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
+                    UseMouse = false
+                };
+
+                var weaponsMenu = new NativeMenu("Armes", "Armes")
+                {
+                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
+                    UseMouse = false
+                };
+                var weapons = JsonConvert.DeserializeObject<List<Weapon>>(PlayerInst.Inventory);
+                if (weapons != null)
+                {
+                    foreach (var weapon in weapons)
+                    {
+                        var ammo = 0;
+                        foreach (var item in items)
+                        {
+                            if (item.Item == "Munitions")
+                            {
+                                ammo = item.Quantity;
+                                break;
+                            }
+                        }
+                        if (weapon.WeaponName != null)
+                        {
+                            var weaponItem = new NativeListItem<string>($"{weapon.WeaponName}", "", "Équiper", "Déséquiper");
+                            weaponsMenu.Add(weaponItem);
+                            weaponItem.Activated += (sender, e) =>
+                            {
+                                if (weaponItem.SelectedItem == "Équiper")
+                                {
+                                    GiveWeaponToPed(GetPlayerPed(-1), (uint)GetHashKey($"weapon_{weapon.WeaponName}"), 0, false, false);
+                                    SetPedAmmo(GetPlayerPed(-1), (uint)GetHashKey($"weapon_{weapon.WeaponName}"), ammo);
+                                }
+                                else
+                                {
+                                    RemoveWeaponFromPed(GetPlayerPed(-1), (uint)GetHashKey($"weapon_{weapon.WeaponName}"));
+                                }
+                            };
+                        }
+                    }
+                }
+
+                SetSubmenu(mainMenu, shopMenu, menuInfo, inventoryMenu, clothMenu, billsMenu, carMenu, weaponsMenu);
+                SetPool(mainMenu, shopMenu, menuInfo, inventoryMenu, clothMenu, billsMenu, carMenu, weaponsMenu);
             }
         }
 
-
-        [EventHandler("core:sendVehicleList")]
-        public void SendVehicleList(dynamic json)
+        public void F6Menu()
         {
-            foreach (var item in json)
+
+        }
+
+        public void ItemAction(string action, string item)
+        {
+            if (action == "Utiliser")
             {
-                Console.WriteLine(item);
+                switch(item)
+                {
+                    case "Pain":
+                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 3000);
+                        SetEntityHealth(GetPlayerPed(-1), GetEntityHealth(GetPlayerPed(-1))+10);
+                        break;
+                    case "Eau":
+                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 3000);
+                        break;
+                    case "Outil de crochetage":
+                        Format.PlayAnimation("anim@heists@humane_labs@emp@hack_door", "hack_intro", 10000);
+                        break;
+                    case "Dollars":
+                        BaseScript.TriggerServerEvent("appart:callPolice"); // TEST
+                        break;
+                    case "Phone":
+                        break;
+                }
             }
         }
 
-        [Tick]
-        public Task OnTick()
+        public void SetPool(params NativeMenu[] menus)
         {
-            Pool.Process();
-            var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
-            // Format.SendTextUI($"{playerCoords}");
-            Parking.OnTick();
-            PopulationManaged();
-            return Task.FromResult(0);
+            foreach (var element in menus)
+            {
+                Pool.Add(element);
+            }
         }
-        public Task PopulationManaged()
+
+        public void SetSubmenu(NativeMenu mainMenu, params NativeMenu[] subMenus)
         {
-            SetVehicleDensityMultiplierThisFrame(0.5f);
-            SetPedDensityMultiplierThisFrame(0.5f);
-            SetRandomVehicleDensityMultiplierThisFrame(0.5f);
-            SetParkedVehicleDensityMultiplierThisFrame(0.5f);
-            SetScenarioPedDensityMultiplierThisFrame(0.5f, 0.5f);
-            return Task.FromResult(0);
+            foreach (var element in subMenus)
+            {
+                mainMenu.AddSubMenu(element);
+            }
         }
-        public Player GetLocalPlayer() => this.LocalPlayer;
-        public void AddEvent(string key, System.Delegate value) => this.EventHandlers.Add(key, value);
+
+        public void GetPlayerData(string json)
+        {
+            var player = JsonConvert.DeserializeObject<PlayerInstance>(json);
+            PlayerInst.Firstname = player.Firstname;
+            PlayerInst.Lastname = player.Lastname;
+            PlayerInst.Bitcoin = player.Bitcoin;
+            PlayerInst.Birth = player.Birth;
+            PlayerInst.Clothes = player.Clothes;
+            PlayerInst.Money = player.Money;
+            PlayerInst.Bills = player.Bills;
+            PlayerInst.Inventory = player.Inventory;
+        }
+
     }
 }
