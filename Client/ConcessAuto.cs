@@ -2,6 +2,7 @@ using CitizenFX.Core;
 using Core.Client;
 using LemonUI;
 using LemonUI.Menus;
+using Mono.CSharp;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -9,7 +10,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static CitizenFX.Core.Native.API;
-using Game = CitizenFX.Core.Game;
 
 namespace Core.Client
 {
@@ -22,8 +22,10 @@ namespace Core.Client
         public BaseScript BaseScript;
 
         public Vector3 vehicleOut = new Vector3(-47.1f, -1113.3f, 26.44f);
-
-        public Vector3 Vendeur = new Vector3(-41.5f, -1114.1f, 25.4f);
+        public Vector3 Vendeur = new Vector3(-41.5f, -1114.1f, 25.6f);
+        bool Previsualisation_state = false;
+        int Car = 0;
+        Vehicle MyVehicle;
 
         public ConcessAuto(ClientMain caller)
         {
@@ -32,33 +34,6 @@ namespace Core.Client
             Format = caller.Format;
             Parking = caller.Parking;
         }
-
-        public void SpawnPnj()
-        {
-            Client.SpawnPnj(PedHash.Michael, Vendeur.X, Vendeur.Y, Vendeur.Z, 30);
-        }
-
-        public void AddCarEvent(Model model)
-        {
-            if (IsPositionOccupied(vehicleOut.X, vehicleOut.Y, vehicleOut.Z, 1, false, true, true, false, false, 0, false) != true)
-            {
-                model.Request();
-                SetEntityAsMissionEntity(model, true, false);
-                World.CreateVehicle(model, vehicleOut, heading: 90);
-            }
-            else
-            {
-                ClearAreaOfEverything(vehicleOut.X, vehicleOut.Y, vehicleOut.Z, 10, false, false, false, false);
-                Format.SendNotif("~r~Vous ne pouvez pas sortir ce véhicule. Quelque chose lui en empêche.");
-            }
-        }
-
-        bool Previsualisation_state = false;
-        int Car = 0;
-        Vehicle MyVehicle;
-        string car_save = "";
-        Model model_save = 0;
-        List<string> carInfo = new List<string>();
 
         public async void Previsualisation(string vehicle)
         {
@@ -100,12 +75,14 @@ namespace Core.Client
                 Format.SendNotif("~r~Vous ne pouvez pas sortir ce véhicule. Quelque chose lui en empêche.");
             }
         }
+
         public void Previsualisation_Menu(Model model)
         {
             if (Previsualisation_state)
             {
                 SetPedIntoVehicle(GetPlayerPed(-1), model.Hash, 1);
                 Format.SendNotif("~y~Prévisualisation de votre véhicule.\n ~w~Regarder derrière vous");
+
                 var color_list = new Dictionary<string, List<int>>()
                 {
                     { "Rouge", new List<int>() { 255, 0, 0} },
@@ -115,80 +92,61 @@ namespace Core.Client
                     { "Noir", new List<int>() { 0, 0, 0} },
                     { "Violet", new List<int>() { 140, 0, 255} }
                 };
-                var menu = new NativeMenu("Prévisualisation");
-                menu.TitleFont = CitizenFX.Core.UI.Font.ChaletLondon;
+
+                var menu = new NativeMenu("Prévisualisation")
+                {
+                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
+                    Visible = true,
+                    UseMouse = false
+                };
                 Pool.Add(menu);
+
                 var couleur = new NativeListItem<string>("Couleur", "Choisis une couleur", color_list.Keys.ToArray());
                 menu.Add(couleur);
+
                 couleur.ItemChanged += (sender, e) =>
                 {
                     var key = couleur.SelectedItem;
-                    var rgb = 1;
-                    var matches = color_list.Where(item => item.Key.Equals(key) || item.Value.Contains(rgb));
-
-                    foreach (var match in matches)
+                    if (color_list.TryGetValue(key, out var rgb))
                     {
-                        SetVehicleCustomPrimaryColour(Car, match.Value[0], match.Value[1], match.Value[2]);
+                        SetVehicleCustomPrimaryColour(Car, rgb[0], rgb[1], rgb[2]);
                     }
-
                 };
+
                 var buy = new NativeItem("~g~Acheter");
                 menu.Add(buy);
-                buy.Activated += (sender, e) =>
+
+                buy.Activated += async (sender, e) =>
                 {
-                    Format.SendNotif("~g~Vous avez bien acheté le véhicule, rendez vous derrière le Concessionnaire.");
-                    model_save = new Model(car_save);
-                    Parking.SendVehicleInfo(MyVehicle);
-                    BaseScript.TriggerServerEvent("core:getVehicleInfo");
-                    menu.Visible = false;
+                    var cost = GetVehicleModelValue(model);
+                    BaseScript.TriggerServerEvent("core:getPlayerMoney");
+                    await BaseScript.Delay(100);
+
+                    if (Client.PlayerMoney >= cost)
+                    {
+                        Format.SendNotif("~g~Vous avez bien acheté le véhicule.\n Il sera livré dans votre garage dans quelques minutes...");
+                        BaseScript.TriggerServerEvent("core:transaction", cost);
+
+                        Parking.SendVehicleInfo(MyVehicle);
+                        BaseScript.TriggerServerEvent("core:getVehicleInfo");
+                        menu.Visible = false;
+                    }
+                    else
+                    {
+                        Format.SendNotif("~r~Vous n'avez pas assez d'argent.");
+                    }
                 };
-                menu.Visible = true;
-                menu.UseMouse = false;
+
 
                 menu.Closed += (sender, e) =>
                 {
                     Previsualisation_state = false;
                     DeleteEntity(ref Car);
+                    MenuShop();
                 };
             }
         }
-        public void SpawnModel(Model model, string color)
-        {
-            SetEntityAsMissionEntity(model, true, false);
-            var car = CreateVehicle((uint)model.Hash, -31, -1091, 26.5f, 325, true, false);
-            model.Request();
-            if (color == "Rouge")
-            {
-                SetVehicleCustomPrimaryColour(car, 255, 0, 0);
-                carInfo.Add("[255, 0, 0]");
-            }
-            if (color == "Bleu")
-            {
-                SetVehicleCustomPrimaryColour(car, 0, 0, 255);
-                carInfo.Add("[0, 0, 255]");
-            }
-            if (color == "Vert")
-            {
-                SetVehicleCustomPrimaryColour(car, 0, 255, 0);
-                carInfo.Add("[0, 255, 0]");
-            }
-            if (color == "Jaune")
-            {
-                SetVehicleCustomPrimaryColour(car, 255, 255, 0);
-                carInfo.Add("[255, 255, 0]");
-            }
-            if (color == "Noir")
-            {
-                SetVehicleCustomPrimaryColour(car, 0, 0, 0);
-                carInfo.Add("[0, 0, 0]");
-            }
-            if (color == "Violet")
-            {
-                SetVehicleCustomPrimaryColour(car, 140, 0, 255);
-                carInfo.Add("[140, 0, 255]");
-            }
-            SetVehicleNumberPlateText(car, $"{GeneratePlate()}");
-        }
+
         public static string GeneratePlate()
         {
             string alphabet = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
@@ -212,31 +170,53 @@ namespace Core.Client
             return new string(first) + new string(second) + new string(third);
         }
 
+        private bool IsExcludedVehicleClass(int vehicleClass)
+        {
+            int[] excludedClasses = { 10, 11, 14, 15, 16, 17, 18, 19, 20, 21, 22 };
+            return excludedClasses.Contains(vehicleClass);
+        }
+
+        private bool IsCringeVehicle(string vehicleName)
+        {
+            List<string> cringeVehicles = new List<string> { "Oppressor", "Kuruma2", "Ruiner2", "Ruiner3", "Dukes2", "Boxville3", "Boxville4", "Boxville5", "Speedo2", "Burrito4", "Pony2", "Rumpo3", "Burrito2", "Burrito3", "Taco", "Romero", "Cog552", "Schafter6", "Asea2", "Emperor3", "Schafter5", "Cognoscenti2", "Limo2", "Dune2", "Dune", "NightShark", "Technical2", "Marshall", "Technical3", "Blazer2", "Dune5", "TrophyTruck2", "Dune4", "Monster", "RancherXL2", "RangerXL2", "Insurgent2", "Mesa2", "Mesa3", "XLS2", "Dubsta2", "Baller5", "Baller6", "Baller4", "JB700", "Dilettante2", "Voltic2" };
+            return cringeVehicles.Contains(vehicleName);
+        }
+
+
         public void MenuShop()
         {
             var playerCoords = GetEntityCoords(PlayerPedId(), false);
             var distance = GetDistanceBetweenCoords(Vendeur.X, Vendeur.Y, Vendeur.Z, playerCoords.X, playerCoords.Y, playerCoords.Z, false);
             if (distance < 4)
             {
-                Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir le catalogue");
                 var mainMenu = new NativeMenu("Catalogue", "Bienvenue sur le catalogue")
                 {
                     TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     UseMouse = false
                 };
-                var vehicleNames = Enum.GetNames(typeof(VehicleHash));
-                var vehicleClasses = new Dictionary<int, List<string>>();
+                var vehicleNames = System.Enum.GetNames(typeof(VehicleHash));
+                var vehicleClasses = new Dictionary<int, List<string>>
+                {
+                    { 25, new List<string>(){ "twingo", "vwinstance" } }
+                };
 
                 foreach (var vehicleName in vehicleNames)
                 {
-                    Enum.TryParse(vehicleName, out VehicleHash vehicleHash);
+                    System.Enum.TryParse(vehicleName, out VehicleHash vehicleHash);
                     var vehicleClass = GetVehicleClassFromName((uint)vehicleHash);
+
+                    if (IsExcludedVehicleClass(vehicleClass) || IsCringeVehicle(vehicleName))
+                    {
+                        continue;
+                    }
+
                     if (!vehicleClasses.ContainsKey(vehicleClass))
                     {
                         vehicleClasses.Add(vehicleClass, new List<string>());
                     }
                     vehicleClasses[vehicleClass].Add(vehicleName);
                 }
+
 
                 foreach (var vehicleClass in vehicleClasses.Keys)
                 {
@@ -250,7 +230,8 @@ namespace Core.Client
 
                     foreach (var vehicleName in vehicleClasses[vehicleClass])
                     {
-                        var vehicleItem = new NativeItem(vehicleName, $"Acheter {vehicleName}");
+                        var vehicleHash = GetHashKey(vehicleName);
+                        var vehicleItem = new NativeItem(vehicleName, $"Acheter {vehicleName}", $"{GetVehicleModelMonetaryValue(vehicleHash)}");
                         classMenu.Add(vehicleItem);
 
                         vehicleItem.Activated += (sender, args) =>
@@ -300,15 +281,26 @@ namespace Core.Client
 
         public void OnTick()
         {
+            var playerCoords = GetEntityCoords(PlayerPedId(), false);
+            var dist = Vendeur.DistanceToSquared(playerCoords);
+            
+            if (dist < 30)
+            {
+                Format.SetMarker(Vendeur, MarkerType.CarSymbol);
+                if (dist < 4)
+                {
+                    Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir le catalogue");
+                }
+            }
             if (IsControlPressed(0, 38))
             {
                 MenuShop();
             }
             if (Previsualisation_state)
             {
-                var playerCoords = GetEntityCoords(PlayerPedId(), false);
-                float dist = vehicleOut.DistanceToSquared(playerCoords);
-                if (dist > 50)
+                
+                float carDist = vehicleOut.DistanceToSquared(playerCoords);
+                if (carDist > 50)
                 {
                     Previsualisation_state = false;
                     Format.SendNotif("Et non gamin, où croyais-tu aller comme ça ?");
