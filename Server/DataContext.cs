@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -27,6 +27,8 @@ namespace Core.Server
         public int Id { get; set; }
         [Column("license")]
         public string License { get; set; }
+        [Column("bitcoin")]
+        public int Bitcoin { get; set; }
         [Column("gender")]
         public string Gender { get; set; }
         [Column("firstname")]
@@ -37,6 +39,8 @@ namespace Core.Server
         public string Clothes { get; set; }
         [Column("money")]
         public int Money { get; set; }
+        [Column("bills")]
+        public string Bills { get; set; }
         [Column("cars")]
         public string Cars { get; set; }
         [Column("phone")]
