@@ -14,16 +14,6 @@ using static CitizenFX.Core.Native.API;
 
 namespace Core.Client
 {
-    public class VehicleInfo
-    {
-        public string Model { get; set; }
-        public string Plate { get; set; }
-        public int EngineLevel { get; set; }
-        public int BrakeLevel { get; set; }
-        public int ColorPrimary { get; set; }
-        public int ColorSecondary { get; set; }
-    }
-
     public class Parking
     {
         public ClientMain Client;
@@ -82,7 +72,6 @@ namespace Core.Client
             parkingEnterList.Add(new Vector3(225.5f, -755.3f, 30.8f));
             parkingEnterList.Add(new Vector3(114.5f, 6611.6f, 31.8f));
             parkingEnterList.Add(new Vector3(57.2f, 28.8f, 70));
-            Debug.WriteLine("Concess");
             BaseScript.TriggerServerEvent("core:getVehicleInfo");
         }
 
@@ -101,6 +90,7 @@ namespace Core.Client
             List<VehicleInfo> vehicles = JsonConvert.DeserializeObject<List<VehicleInfo>>(json);
             if (vehicles != null && vehicles.Count > 0)
             {
+                CarList.Clear();
                 foreach (VehicleInfo info in vehicles)
                 {
                     CarList.Add(info);
@@ -110,7 +100,6 @@ namespace Core.Client
 
         public void SendVehicleInfo(Vehicle vehicle)
         {
-            Ped ped = Game.PlayerPed;
             if (vehicle.Exists())
             {
                 VehicleInfo info = new VehicleInfo
@@ -143,8 +132,11 @@ namespace Core.Client
             float dist = 0;
             foreach (var entry in parkingDict)
             {
-                Format.SetMarker(entry.Key, MarkerType.CarSymbol);
                 dist = entry.Key.DistanceToSquared(playerCoords);
+                if (dist < 100)
+                {
+                    Format.SetMarker(entry.Key, MarkerType.CarSymbol);
+                }
                 if (dist < 2)
                 {
                     Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir la liste des véhicules");
@@ -156,7 +148,7 @@ namespace Core.Client
                         var parkingListOccupied = new List<Vector3>();
                         foreach (var car in CarList)
                         {
-                            NativeItem item = new NativeItem(car.Model.ToString().ToUpper());
+                            NativeItem item = new NativeItem($"{car.Model.ToString().ToUpper()} [{car.Plate}]");
                             menu.Add(item);
                             item.Activated += (sender, e) =>
                             {
