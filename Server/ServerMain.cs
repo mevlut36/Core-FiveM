@@ -46,6 +46,15 @@ namespace Core.Server
         [JsonProperty("date")]
         public string Date { get; set; }
     }
+
+    public class ItemQuantity
+    {
+        [JsonProperty("item")]
+        public string Item { get; set; }
+
+        [JsonProperty("quantity")]
+        public int Quantity { get; set; }
+    }
     public class ServerMain : BaseScript
     {
         public ServerMain()
@@ -121,7 +130,6 @@ namespace Core.Server
             }
         }
 
-        // rename for registerPlayerData
         [EventHandler("core:registerPlayerData")]
         public void RegisterPlayerData([FromSource] Player player, string json)
         {
@@ -137,6 +145,7 @@ namespace Core.Server
                     Clothes = data.Clothes,
                     Money = data.Money,
                     Birth = data.Birth,
+                    LastPosition = new CitizenFX.Core.Vector3(-283.2f, -939.4f, 31.2f).ToString()
                 };
                 dbContext.Player.Add(newPlayer);
                 dbContext.SaveChanges();
@@ -278,7 +287,7 @@ namespace Core.Server
                 {
                     if(existingPlayer.Money >= cost)
                     {
-                        existingPlayer.Money = existingPlayer.Money - cost;
+                        existingPlayer.Money -= cost;
                         TriggerClientEvent(player, "core:sendNotif", $"Vous avez payé ~r~${cost}~w~.");
                         dbContext.SaveChanges();
                     } else
@@ -289,6 +298,41 @@ namespace Core.Server
                 }
             }
         }
+
+        [EventHandler("core:bankTransaction")]
+        public void BankTransaction([FromSource] Player player, string action, int amount)
+        {
+            var license = player.Identifiers["license"];
+            var networkId = player.Handle;
+            var playerPed = GetPlayerPed(networkId);
+
+            using (var dbContext = new DataContext())
+            {
+                var existingPlayer = dbContext.Player.FirstOrDefault(u => u.License == license);
+                if (existingPlayer != null)
+                {
+                    var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(existingPlayer.Inventory);
+                    var dollarsItem = items.FirstOrDefault(item => item.Item == "Dollars");
+
+                    if (action == "Retirer")
+                    {
+                        existingPlayer.Money -= amount;
+                        dollarsItem.Quantity += amount;
+                    }
+                    else if (action == "Déposer")
+                    {
+                        existingPlayer.Money += amount;
+                        dollarsItem.Quantity -= amount;
+                    }
+
+                    existingPlayer.Inventory = JsonConvert.SerializeObject(items);
+                    dbContext.SaveChanges();
+                }
+            }
+
+            TriggerClientEvent(player, "core:sendNotif", $"Vous avez {action} ~g~${amount}~w~.");
+        }
+
 
         [EventHandler("core:giveMoney")]
         public void GiveMoney([FromSource] Player player, int amount)
@@ -306,6 +350,24 @@ namespace Core.Server
                 }
             }
             TriggerClientEvent(player, "core:sendNotif", $"Vous avez reçu ~g~${amount}~w~.");
+        }
+
+        [EventHandler("core:giveMoney")]
+        public void RemoveMoney([FromSource] Player player, int amount)
+        {
+            var license = player.Identifiers["license"];
+            var networkId = player.Handle;
+            var playerPed = GetPlayerPed(networkId);
+            using (var dbContext = new DataContext())
+            {
+                var existingPlayer = dbContext.Player.FirstOrDefault(u => u.License == license);
+
+                if (existingPlayer != null)
+                {
+                    existingPlayer.Money -= amount;
+                }
+            }
+            TriggerClientEvent(player, "core:sendNotif", $"~r~-${amount}~w~.");
         }
 
         [EventHandler("core:payBill")]
