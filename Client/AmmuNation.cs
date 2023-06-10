@@ -16,64 +16,90 @@ namespace Core.Client
         public Format Format;
         public ObjectPool Pool = new ObjectPool();
         public BaseScript BaseScript;
+        List <AmmuNationInfo> AmmuNationList = new List<AmmuNationInfo>();
         public Vector3 Vendeur = new Vector3(22, -1105, (float)28.7);
         public AmmuNation(ClientMain caller)
         {
             Pool = caller.Pool;
             Client = caller;
             Format = caller.Format;
+
+            AmmuNationInfo ltd1 = new AmmuNationInfo("Pillbox Hill", new Vector3(21.2f, -1104.7f, 29.6f), new Vector3(21.2f, -1103.5f, 29.5f));
+            AmmuNationList.Add(ltd1);
+            AmmuNationInfo ltd2 = new AmmuNationInfo("La Mesa", new Vector3(842.5f, -1033.1f, 28.1f), new Vector3(842.5f, -1035.6f, 28));
+            AmmuNationList.Add(ltd2);
+            AmmuNationInfo ltd3 = new AmmuNationInfo("Hawick", new Vector3(252, -49.6f, 69.8f), new Vector3(254.1f, -50.3f, 69.8f));
+            AmmuNationList.Add(ltd3);
+            AmmuNationInfo ltd4 = new AmmuNationInfo("Morningwood", new Vector3(-1305.9f, -394.2f, 36.6f), new Vector3(-1303.7f, -394.2f, 36.6f));
+            AmmuNationList.Add(ltd4);
+            AmmuNationInfo ltd5 = new AmmuNationInfo("Little Seoul", new Vector3(-662.4f, -935.3f, 29.7f), new Vector3(-662.4f, -933.2f, 29.7f));
+            AmmuNationList.Add(ltd5);
+            AmmuNationInfo ltd6 = new AmmuNationInfo("Monts Tataviam", new Vector3(2568.1f, 294.6f, 108.7f), new Vector3(2567.9f, 292.1f, 108.7f));
+            AmmuNationList.Add(ltd6);
+            AmmuNationInfo ltd7 = new AmmuNationInfo("Paleto Bay", new Vector3(-330.4f, 6083.6f, 31.4f), new Vector3(-331.8f, 6085.2f, 31.4f));
+            AmmuNationList.Add(ltd7);
+            AmmuNationInfo ltd8 = new AmmuNationInfo("Sandy Shores", new Vector3(1693.6f, 3759.6f, 34.7f), new Vector3(1691.9f, 3759.6f, 34.7f));
+            AmmuNationList.Add(ltd8);
         }
         public void GunShop()
         {
             var playerCoords = GetEntityCoords(PlayerPedId(), false);
-            var distance = GetDistanceBetweenCoords(Vendeur.X, Vendeur.Y, Vendeur.Z, playerCoords.X, playerCoords.Y, playerCoords.Z, false);
-            if (distance < 4)
+            foreach (var ammuNation in AmmuNationList)
             {
-                Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir le catalogue");
-                if (IsControlPressed(0, 38))
+                var distance = GetDistanceBetweenCoords(ammuNation.Checkout.X, ammuNation.Checkout.Y, ammuNation.Checkout.Z, playerCoords.X, playerCoords.Y, playerCoords.Z, false);
+                if (distance < 4)
                 {
-                    var menu = new NativeMenu("Ammu-Nation", "Acheter vos armes");
-                    Pool.Add(menu);
-                    var weapon_dict = new Dictionary<string, Dictionary<WeaponHash, int>>();
-
-                    weapon_dict.Add("Lampe de poche", new Dictionary<WeaponHash, int>());
-                    weapon_dict["Lampe de poche"].Add(WeaponHash.Flashlight, 2000);
-
-                    weapon_dict.Add("Batte de base-ball", new Dictionary<WeaponHash, int>());
-                    weapon_dict["Batte de base-ball"].Add(WeaponHash.Bat, 2000);
-
-                    weapon_dict.Add("Couteau", new Dictionary<WeaponHash, int>());
-                    weapon_dict["Couteau"].Add(WeaponHash.Knife, 5000);
-
-                    weapon_dict.Add("Machette", new Dictionary<WeaponHash, int>());
-                    weapon_dict["Machette"].Add(WeaponHash.Machete, 7000);
-
-                    weapon_dict.Add("Pétoire", new Dictionary<WeaponHash, int>());
-                    weapon_dict["Pétoire"].Add(WeaponHash.SNSPistol, 80000);
-
-                    foreach (KeyValuePair<string, Dictionary<WeaponHash, int>> weapon in weapon_dict)
+                    Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir le catalogue");
+                    if (IsControlPressed(0, 38))
                     {
-                        foreach (var kvp2 in weapon.Value)
+                        var menu = new NativeMenu("Ammu-Nation", "Acheter vos armes")
                         {
-                            var model = new Model(kvp2.Key);
-                            var item = new NativeItem(weapon.Key, "", $"~g~{kvp2.Value}$");
-                            menu.Add(item);
-                            item.Activated += (sender, e) =>
+                            TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
+                            UseMouse = false
+                        };
+                        Pool.Add(menu);
+                        var weapon_dict = new Dictionary<string, Dictionary<WeaponHash, int>>();
+
+                        weapon_dict.Add("Lampe de poche", new Dictionary<WeaponHash, int>());
+                        weapon_dict["Lampe de poche"].Add(WeaponHash.Flashlight, 2000);
+
+                        weapon_dict.Add("Batte de base-ball", new Dictionary<WeaponHash, int>());
+                        weapon_dict["Batte de base-ball"].Add(WeaponHash.Bat, 2000);
+
+                        weapon_dict.Add("Couteau", new Dictionary<WeaponHash, int>());
+                        weapon_dict["Couteau"].Add(WeaponHash.Knife, 5000);
+
+                        weapon_dict.Add("Machette", new Dictionary<WeaponHash, int>());
+                        weapon_dict["Machette"].Add(WeaponHash.Machete, 7000);
+
+                        weapon_dict.Add("Pétoire", new Dictionary<WeaponHash, int>());
+                        weapon_dict["Pétoire"].Add(WeaponHash.SNSPistol, 80000);
+
+                        foreach (KeyValuePair<string, Dictionary<WeaponHash, int>> weapon in weapon_dict)
+                        {
+                            foreach (var kvp2 in weapon.Value)
                             {
-                                BaseScript.TriggerServerEvent("core:getPlayerMoney");
-                                if (Client.PlayerMoney >= kvp2.Value)
+                                var model = new Model(kvp2.Key);
+                                var item = new NativeItem(weapon.Key, "", $"~g~{kvp2.Value}$");
+                                menu.Add(item);
+                                item.Activated += (sender, e) =>
                                 {
-                                    Format.SendNotif($"~g~Vous avez bien acheté {weapon.Key}");
-                                    BaseScript.TriggerServerEvent("core:transaction", kvp2.Value);
-                                    BaseScript.TriggerServerEvent("core:addWeapon", kvp2.Key.ToString());
-                                }
-                                else
-                                {
-                                    Format.SendNotif("~r~Vous n'avez pas assez d'argent.");
-                                }
-                            };
-                            menu.Visible = true;
-                            menu.UseMouse = false;
+                                    BaseScript.TriggerServerEvent("core:getPlayerMoney");
+                                    if (Client.PlayerMoney >= kvp2.Value)
+                                    {
+                                        Format.SendNotif($"~g~Vous avez bien acheté {weapon.Key}");
+                                        BaseScript.TriggerServerEvent("core:transaction", kvp2.Value);
+                                        BaseScript.TriggerServerEvent("core:addWeapon", kvp2.Key.ToString());
+
+                                    }
+                                    else
+                                    {
+                                        Format.SendNotif("~r~Vous n'avez pas assez d'argent.");
+                                    }
+                                };
+                                menu.Visible = true;
+                                menu.UseMouse = false;
+                            }
                         }
                     }
                 }
