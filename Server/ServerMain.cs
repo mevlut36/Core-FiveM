@@ -274,7 +274,7 @@ namespace Core.Server
         }
 
         [EventHandler("core:transaction")]
-        public void Transaction([FromSource] Player player, int cost)
+        public void Transaction([FromSource] Player player, int cost, string itemName = "Pain", int amount = 1)
         {
             var license = player.Identifiers["license"];
             var networkId = player.Handle;
@@ -285,16 +285,20 @@ namespace Core.Server
 
                 if (existingPlayer != null)
                 {
-                    if(existingPlayer.Money >= cost)
+                    var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(existingPlayer.Inventory);
+                    var itemFilter = items.FirstOrDefault(item => item.Item == itemName);
+                    if (existingPlayer.Money >= cost)
                     {
                         existingPlayer.Money -= cost;
+                        itemFilter.Quantity += amount;
                         TriggerClientEvent(player, "core:sendNotif", $"Vous avez payé ~r~${cost}~w~.");
-                        dbContext.SaveChanges();
+                        
                     } else
                     {
                         TriggerClientEvent(player, "core:sendNotif", $"~r~Vous n'avez pas assez d'argent.");
                     }
-                    
+                    existingPlayer.Inventory = JsonConvert.SerializeObject(items);
+                    dbContext.SaveChanges();
                 }
             }
         }
@@ -314,23 +318,29 @@ namespace Core.Server
                     var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(existingPlayer.Inventory);
                     var dollarsItem = items.FirstOrDefault(item => item.Item == "Dollars");
 
-                    if (action == "Retirer")
+                    if (action == "~g~<b>Retirer</b>")
                     {
-                        existingPlayer.Money -= amount;
-                        dollarsItem.Quantity += amount;
+                        if (amount <= existingPlayer.Money)
+                        {
+                            existingPlayer.Money -= amount;
+                            dollarsItem.Quantity += amount;
+                            TriggerClientEvent(player, "core:sendNotif", $"Vous avez {action} ~g~${amount}~w~.");
+                        }
                     }
-                    else if (action == "Déposer")
+                    else if (action == "~g~<b>Déposer</b>")
                     {
-                        existingPlayer.Money += amount;
-                        dollarsItem.Quantity -= amount;
+                        if (amount <= dollarsItem.Quantity)
+                        {
+                            existingPlayer.Money += amount;
+                            dollarsItem.Quantity -= amount;
+                            TriggerClientEvent(player, "core:sendNotif", $"Vous avez {action} ~g~${amount}~w~.");
+                        }
                     }
 
                     existingPlayer.Inventory = JsonConvert.SerializeObject(items);
                     dbContext.SaveChanges();
                 }
             }
-
-            TriggerClientEvent(player, "core:sendNotif", $"Vous avez {action} ~g~${amount}~w~.");
         }
 
 
