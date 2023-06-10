@@ -1,3 +1,4 @@
+using CitizenFX.Core;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -54,5 +55,19 @@ namespace Core.Client
         public int BrakeLevel { get; set; }
         public int ColorPrimary { get; set; }
         public int ColorSecondary { get; set; }
+    }
+
+    public class BankInfo
+    {
+        public string BankName { get; set; }
+        public Vector3 Checkout { get; set; }
+        public Vector3 Robbery { get; set; }
+
+        public BankInfo(string bankName, Vector3 checkout, Vector3 robbery)
+        {
+            BankName = bankName;
+            Checkout = checkout;
+            Robbery = robbery;
+        }
     }
 }
