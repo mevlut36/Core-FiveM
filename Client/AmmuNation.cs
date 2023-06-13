@@ -16,6 +16,7 @@ namespace Core.Client
         public Format Format;
         public ObjectPool Pool = new ObjectPool();
         public BaseScript BaseScript;
+        PlayerMenu PlayerMenu;
         List <AmmuNationInfo> AmmuNationList = new List<AmmuNationInfo>();
         public Vector3 Vendeur = new Vector3(22, -1105, (float)28.7);
         public AmmuNation(ClientMain caller)
@@ -23,6 +24,7 @@ namespace Core.Client
             Pool = caller.Pool;
             Client = caller;
             Format = caller.Format;
+            PlayerMenu = caller.PlayerMenu;
 
             AmmuNationInfo ltd1 = new AmmuNationInfo("Pillbox Hill", new Vector3(21.2f, -1104.7f, 29.6f), new Vector3(21.2f, -1103.5f, 29.5f));
             AmmuNationList.Add(ltd1);
@@ -40,6 +42,16 @@ namespace Core.Client
             AmmuNationList.Add(ltd7);
             AmmuNationInfo ltd8 = new AmmuNationInfo("Sandy Shores", new Vector3(1693.6f, 3759.6f, 34.7f), new Vector3(1691.9f, 3759.6f, 34.7f));
             AmmuNationList.Add(ltd8);
+            AmmuNationInfo ltd9 = new AmmuNationInfo("Chumash", new Vector3(-3171.6f, 1087.3f, 20.7f), new Vector3(-3173.7f, 1088.4f, 20.7f));
+            AmmuNationList.Add(ltd9);
+            foreach (var ammuNation in AmmuNationList)
+            {
+                Blip myBlip = World.CreateBlip(ammuNation.Checkout);
+                myBlip.Sprite = BlipSprite.AmmuNation;
+                myBlip.Color = BlipColor.Red;
+                myBlip.Name = "AmmuNation";
+                myBlip.IsShortRange = true;
+            }
         }
         public void GunShop()
         {
@@ -84,13 +96,12 @@ namespace Core.Client
                                 menu.Add(item);
                                 item.Activated += (sender, e) =>
                                 {
-                                    BaseScript.TriggerServerEvent("core:getPlayerMoney");
-                                    if (Client.PlayerMoney >= kvp2.Value)
+                                    if (PlayerMenu.PlayerInst.Money >= kvp2.Value)
                                     {
                                         Format.SendNotif($"~g~Vous avez bien acheté {weapon.Key}");
                                         BaseScript.TriggerServerEvent("core:transaction", kvp2.Value);
                                         BaseScript.TriggerServerEvent("core:addWeapon", kvp2.Key.ToString());
-
+                                        BaseScript.TriggerServerEvent("core:requestPlayerData");
                                     }
                                     else
                                     {
