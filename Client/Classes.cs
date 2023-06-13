@@ -15,12 +15,9 @@ namespace Core.Client
 
         [JsonProperty("quantity")]
         public int Quantity { get; set; }
-    }
 
-    public class Weapon
-    {
-        [JsonProperty("weapon")]
-        public string WeaponName { get; set;}
+        [JsonProperty("type")]
+        public string Type { get; set; }
     }
 
     public class Bills
@@ -47,14 +44,22 @@ namespace Core.Client
         public string Bills { get; set; }
         public string Inventory { get; set; }
     }
+
     public class VehicleInfo
     {
         public string Model { get; set; }
+        public List<BootInfo> Boot { get; set; }
         public string Plate { get; set; }
         public int EngineLevel { get; set; }
         public int BrakeLevel { get; set; }
         public int ColorPrimary { get; set; }
         public int ColorSecondary { get; set; }
+    }
+    public class BootInfo
+    {
+        public string Item { get; set; }
+        public int Quantity { get; set; }
+        public string Type { get; set; }
     }
 
     public class LTDItems
@@ -110,6 +115,19 @@ namespace Core.Client
             Checkout = checkout;
             PNJCoords = pnjCoords;
             ATM = atm;
+        }
+    }
+    public class ClothShopInfo
+    {
+        public string ShopName { get; set; }
+        public Vector3 Checkout { get; set; }
+        public Vector3 PNJCoords { get; set; }
+
+        public ClothShopInfo(string shopName, Vector3 checkout, Vector3 pnjCoords)
+        {
+            ShopName = shopName;
+            Checkout = checkout;
+            PNJCoords = pnjCoords;
         }
     }
 }
