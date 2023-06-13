@@ -90,6 +90,14 @@ namespace Core.Client
 
             LTDShopInfo ltd17 = new LTDShopInfo("Mont Chiliad", new Vector3(1729.0f, 6414.4f, 35), new Vector3(1727.6f, 6415.3f, 35), new Vector3(1735.3f, 6411, 35));
             LTDShops.Add(ltd17);
+            foreach (var ltd in LTDShops)
+            {
+                Blip myBlip = World.CreateBlip(ltd.Checkout);
+                myBlip.Sprite = BlipSprite.Store;
+                myBlip.Name = "Magasin";
+                myBlip.Color = BlipColor.Green;
+                myBlip.IsShortRange = true;
+            }
         }
 
         public void LTDMenu()
@@ -109,7 +117,7 @@ namespace Core.Client
                 {
                     Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir");
 
-                    if (IsControlPressed(0, 38))
+                    if (IsControlJustPressed(0, 38))
                     {
                         var menu = new NativeMenu("LTD", $"LTD - {ltd.LTDName}")
                         {
@@ -120,34 +128,34 @@ namespace Core.Client
                         menu.Visible = true;
 
                         var dollarsItem = items.FirstOrDefault(item => item.Item == "Dollars");
-                        var breadItem = items.FirstOrDefault(item => item.Item == "Pain");
-                        var waterItem = items.FirstOrDefault(item => item.Item == "Eau");
-                        var phoneItem = items.FirstOrDefault(item => item.Item == "Phone");
 
                         var myMoney = new NativeItem($"Mon argent: ~g~${dollarsItem}");
-                        foreach(var item in LTDItems)
+                        foreach (var item in LTDItems)
                         {
+                            var itemDefault = items.FirstOrDefault(i => i.Item == item.Name);
                             var _ = new NativeItem($"{item.Name}", $"{item.Description}", $"~g~${item.Price}");
                             menu.Add(_);
                             _.Activated += async (sender, e) =>
                             {
                                 var textInput = await Format.GetUserInput("Quantité", "1", 4);
                                 var parsedInput = Int32.Parse(textInput);
-
                                 var result = item.Price * parsedInput;
                                 if (result <= PlayerMenu.PlayerInst.Money)
                                 {
                                     PlayerMenu.PlayerInst.Money -= result;
-                                    breadItem.Quantity += parsedInput;
+                                    PlayerMenu.PlayerInst.Inventory = JsonConvert.SerializeObject(items);
+                                    BaseScript.TriggerServerEvent("core:transaction", result, item.Name, parsedInput);
+                                    BaseScript.TriggerServerEvent("core:requestPlayerData");
+                                    menu.Visible = false;
                                 }
                                 else
                                 {
-                                    Format.SendNotif("~r~La somme est trop élevé");
+                                    Format.SendNotif("~r~La somme est trop élevée");
                                 }
-                                PlayerMenu.PlayerInst.Inventory = JsonConvert.SerializeObject(items);
-                                BaseScript.TriggerServerEvent("core:transaction", result, item.Name, parsedInput);
+                                
                             };
                         }
+
                     }
                 }
             }
