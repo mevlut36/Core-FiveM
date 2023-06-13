@@ -19,8 +19,6 @@ namespace Core.Client
         public BaseScript BaseScript;
         public PlayerMenu PlayerMenu;
 
-        private int playerMoney = 0;
-
         List<BankInfo> Banks = new List<BankInfo>();
 
         public Bank(ClientMain caller)
@@ -50,6 +48,14 @@ namespace Core.Client
             
             BankInfo bank7 = new BankInfo("Blaine County", new Vector3(-112.3f, 6468.6f, 31.6f), new Vector3(-105.2f, 6470.9f, 31.6f));
             Banks.Add(bank7);
+            foreach (var bank in Banks)
+            {
+                Blip myBlip = World.CreateBlip(bank.Checkout);
+                myBlip.Sprite = BlipSprite.DollarSign;
+                myBlip.Color = BlipColor.Green;
+                myBlip.Name = "Banque";
+                myBlip.IsShortRange = true;
+            }
         }
 
         public void BankMenu()
@@ -76,10 +82,11 @@ namespace Core.Client
                         Pool.Add(menu);
                         menu.Visible = true;
 
+                        var dollarsAmount = items.FirstOrDefault(item => item.Item == "Dollars")?.Quantity ?? 0;
                         var dollarsItem = items.FirstOrDefault(item => item.Item == "Dollars");
 
                         var myMoneyInBank = new NativeItem($"En banque: ~g~${PlayerMenu.PlayerInst.Money}", "Rien ne se crée, tout se transactionne");
-                        var myMoney = new NativeItem($"En possession: ~g~${dollarsItem.Quantity}");
+                        var myMoney = new NativeItem($"En possession: ~g~${dollarsItem?.Quantity ?? 0}");
 
                         var actionBank = new NativeListItem<string>("Action", "", "~g~<b>Retirer</b>", "~g~<b>Déposer</b>");
                         actionBank.Activated += async (sender, e) =>
@@ -87,19 +94,32 @@ namespace Core.Client
                             var textInput = await Format.GetUserInput("Quantité", "1", 20);
                             var parsedInput = Int32.Parse(textInput);
 
-                            if (actionBank.SelectedItem == "Retirer")
+                            if (actionBank.SelectedItem == "~g~<b>Retirer</b>")
                             {
-                                PlayerMenu.PlayerInst.Money -= parsedInput;
-                                dollarsItem.Quantity += parsedInput;
+                                if (parsedInput <= PlayerMenu.PlayerInst.Money)
+                                {
+                                    PlayerMenu.PlayerInst.Money -= parsedInput;
+                                    dollarsAmount += parsedInput;
+                                } else
+                                {
+                                    Format.SendNotif("~r~La somme est trop élevé");
+                                }
                             }
-                            else if (actionBank.SelectedItem == "Déposer")
+                            else if (actionBank.SelectedItem == "~g~<b>Déposer</b>")
                             {
-                                PlayerMenu.PlayerInst.Money += parsedInput;
-                                dollarsItem.Quantity -= parsedInput;
+                                if (parsedInput <= dollarsAmount)
+                                {
+                                    PlayerMenu.PlayerInst.Money += parsedInput;
+                                    dollarsAmount -= parsedInput;
+                                } else
+                                {
+                                    Format.SendNotif("~r~La somme est trop élevé");
+                                }
                             }
 
                             PlayerMenu.PlayerInst.Inventory = JsonConvert.SerializeObject(items);
                             BaseScript.TriggerServerEvent("core:bankTransaction", actionBank.SelectedItem, parsedInput);
+                            BaseScript.TriggerServerEvent("core:requestPlayerData");
                             menu.Visible = false;
                         };
 
@@ -111,12 +131,9 @@ namespace Core.Client
             }
         }
 
-
-
         public void BankRobbery()
         {
             var playerCoords = GetEntityCoords(PlayerPedId(), false);
-            var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerMenu.PlayerInst.Inventory);
             foreach (var bank in Banks)
             {
                 var distance = GetDistanceBetweenCoords(bank.Robbery.X, bank.Robbery.Y, bank.Robbery.Z, playerCoords.X, playerCoords.Y, playerCoords.Z, false);
@@ -144,6 +161,7 @@ namespace Core.Client
                     }
                 }
             }
+
         }
 
 
