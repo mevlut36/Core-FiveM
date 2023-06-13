@@ -13,6 +13,8 @@ using Newtonsoft.Json.Linq;
 using System.Text.RegularExpressions;
 using System.Drawing;
 using LemonUI.Scaleform;
+using System.Runtime.CompilerServices;
+using LemonUI.Elements;
 
 namespace Core.Client
 {
@@ -26,6 +28,8 @@ namespace Core.Client
         public AmmuNation AmmuNation;
         public Bank Bank;
         public LTDShop LTDShop;
+        public ClothShop ClothShop;
+        public VehicleSystem VehicleSystem;
         public Vector3 dressPos = new Vector3(151.1f, -751.4f, 258.1f);
         public string Result = "";
         private Scaleform _scaleform;
@@ -38,6 +42,8 @@ namespace Core.Client
             Birth = "",
             Clothes = ""
         };
+
+        public List<VehicleInfo> vehicles = new List<VehicleInfo>();
 
         public int PlayerMoney = 0;
         public Vehicle MyVehicle;
@@ -54,7 +60,8 @@ namespace Core.Client
             AmmuNation = new AmmuNation(this);
             Bank = new Bank(this);
             LTDShop = new LTDShop(this);
-            Parking.RegisterAllEvents();
+            ClothShop = new ClothShop(this);
+            VehicleSystem = new VehicleSystem(this);
             EventHandlers["core:getPlayerData"] += new Action<string>(PlayerMenu.GetPlayerData);
             EventHandlers["core:receivePlayerMoney"] += new Action<int>(money =>
             {
@@ -121,7 +128,7 @@ namespace Core.Client
         }
 
         [EventHandler("core:getClothes")]
-        public void GetClothes(string json, string gender)
+        public void GetClothes(string json)
         {
             JObject jsonObject = JObject.Parse(json);
             var properties = jsonObject.Properties();
@@ -273,6 +280,8 @@ namespace Core.Client
                 Player.Firstname = firstname;
                 Player.Lastname = lastname;
                 Player.Birth = birth;
+                Player.Inventory = "[]";
+                Player.Bills = "[]";
                 DressMenu();
             };
 
@@ -447,6 +456,27 @@ namespace Core.Client
             }
         }
 
+        [EventHandler("core:changeLockState")]
+        public void ChangeLockState(int id, string plate, int isLock)
+        {
+            if (isLock == 2 || isLock == 0)
+            {
+                SetVehicleDoorsLocked(id, 1);
+                PlayVehicleDoorOpenSound(id, 1);
+                Format.SendNotif("~g~Vous avez ouvert votre voiture");
+            }
+            else if (isLock == 1)
+            {
+                SetVehicleDoorsLocked(id, 2);
+                PlayVehicleDoorOpenSound(id, 2);
+                Format.SendNotif("~r~Vous avez fermé votre voiture");
+            }
+            else
+            {
+                Format.SendNotif("Valeur de verrouillage non valide");
+            }
+        }
+
         [Tick]
         public Task OnTick()
         {
@@ -461,13 +491,16 @@ namespace Core.Client
             ConcessAuto.OnTick();
             Bank.OnTick();
             LTDShop.OnTick();
-
+            ClothShop.OnTick();
+            VehicleSystem.OnTick();
             AmmuNation.GunShop();
+
             if (Game.PlayerPed != null && Game.PlayerPed.IsAlive)
             {
                 _scaleform.Render2DScreenSpace(new PointF(0.1f, 0.9f), new PointF(0.2f, 0.1f));
                 DrawPlayerHealthBar();
             }
+            
             return Task.FromResult(0);
         }
         public Task PopulationManaged()
