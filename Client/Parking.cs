@@ -20,7 +20,7 @@ namespace Core.Client
         public Format Format;
         public ObjectPool Pool = new ObjectPool();
         public BaseScript BaseScript;
-        
+        VehicleSystem VehicleSystem;
         public Dictionary<Vector3, List<Vector3>> parkingDict = new Dictionary<Vector3, List<Vector3>>();
         public List<Vector3> parkingEnterList = new List<Vector3>();
 
@@ -55,6 +55,14 @@ namespace Core.Client
             new Vector3(60.5f, 17.6f, 69.1f),
             new Vector3(54.4f, 19.3f, 69.5f)
         };
+        
+        Vector3 hippodromeParkingKey = new Vector3(1118.3f, 234.8f, 80.8f);
+        List<Vector3> hippodromeParkingValues = new List<Vector3>()
+        {
+            new Vector3(1123.5f, 243.2f, 80.8f),
+            new Vector3(1127.4f, 249.4f, 80.8f),
+            new Vector3(1113.7f, 252.8f, 80.8f)
+        };
 
         public List<VehicleInfo> CarList = new List<VehicleInfo>();
         public Parking(ClientMain caller)
@@ -62,22 +70,27 @@ namespace Core.Client
             Pool = caller.Pool;
             Client = caller;
             Format = caller.Format;
-
+            VehicleSystem = caller.VehicleSystem;
+            Client.AddEvent("core:sendVehicleInfos", new Action<string, int>(GetVehicles));
             parkingDict.Add(redParkingKey, redParkingValues);
             parkingDict.Add(centralParkingKey, centralParkingValues);
             parkingDict.Add(paletoParkingKey, paletoParkingValues);
             parkingDict.Add(vinewoodParkingKey, vinewoodParkingValues);
+            parkingDict.Add(hippodromeParkingKey, hippodromeParkingValues);
 
             parkingEnterList.Add(new Vector3(-358.6f, -891.4f, 31f));
             parkingEnterList.Add(new Vector3(225.5f, -755.3f, 30.8f));
             parkingEnterList.Add(new Vector3(114.5f, 6611.6f, 31.8f));
             parkingEnterList.Add(new Vector3(57.2f, 28.8f, 70));
+            parkingEnterList.Add(new Vector3(1115.6f, 264.4f, 80.5f));
             BaseScript.TriggerServerEvent("core:getVehicleInfo");
-        }
-
-        public void RegisterAllEvents()
-        {
-            Client.AddEvent("core:sendVehicleInfos", new Action<string, int>(GetVehicles));
+            foreach (var entry in parkingDict)
+            {
+                Blip myBlip = World.CreateBlip(entry.Key);
+                myBlip.Sprite = BlipSprite.Garage;
+                myBlip.Name = "Parking";
+                myBlip.IsShortRange = true;
+            }
         }
 
         public void GetVehicles(string json, int player)
@@ -86,8 +99,9 @@ namespace Core.Client
             {
                 return;
             }
-
+            
             List<VehicleInfo> vehicles = JsonConvert.DeserializeObject<List<VehicleInfo>>(json);
+            Client.vehicles = vehicles;
             if (vehicles != null && vehicles.Count > 0)
             {
                 CarList.Clear();
@@ -106,6 +120,7 @@ namespace Core.Client
                 {
                     Model = API.GetDisplayNameFromVehicleModel((uint)vehicle.Model.Hash),
                     Plate = vehicle.Mods.LicensePlate,
+                    Boot = new List<BootInfo>(),
                     EngineLevel = vehicle.Mods[VehicleModType.Engine].Index,
                     BrakeLevel = vehicle.Mods[VehicleModType.Brakes].Index,
                     ColorPrimary = (int)vehicle.Mods.PrimaryColor,
@@ -169,6 +184,9 @@ namespace Core.Client
                                             {
                                                 SetVehicleNumberPlateText(vehTask.Result.Handle, $"{car.Plate}");
                                                 SetVehicleColours(vehTask.Result.Handle, car.ColorPrimary, car.ColorSecondary);
+                                                SetVehicleDoorsLocked(vehTask.Result.Handle, 2);
+                                                Format.SendNotif("~g~Votre véhicule est bien sorti.");
+                                                menu.Visible = false;
                                             }
                                             else
                                             {
@@ -231,9 +249,6 @@ namespace Core.Client
         public void OnTick()
         {
             ParkingMenu();
-            if (IsControlJustPressed(0, 167))
-            {
-            }
         }
 
     }
