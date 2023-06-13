@@ -84,10 +84,17 @@ namespace Core.Client
                     carImport.Add(vehicleItem);
                     vehicleItem.Activated += async (sender, args) =>
                     {
-                        BaseScript.TriggerServerEvent("core:bitcoinTransaction", displayAttribute.Price);
-                        var vehicleImport = await World.CreateVehicle(new Model(GetHashKey(displayAttribute.VehicleName)), GetEntityCoords(GetPlayerPed(-1), true));
-                        Parking.SendVehicleInfo(vehicleImport);
-                        BaseScript.TriggerServerEvent("core:getVehicleInfo");
+                        if (PlayerInst.Bitcoin >= displayAttribute.Price)
+                        {
+                            BaseScript.TriggerServerEvent("core:bitcoinTransaction", displayAttribute.Price);
+                            var vehicleImport = await World.CreateVehicle(new Model(GetHashKey(displayAttribute.VehicleName)), GetEntityCoords(GetPlayerPed(-1), true));
+                            Parking.SendVehicleInfo(vehicleImport);
+                            Client.UpdateVehicles();
+                            BaseScript.TriggerServerEvent("core:requestPlayerData");
+                        } else
+                        {
+                            Format.SendNotif("Vous n'avez pas assez de ~r~bitcoins~s~...");
+                        }
                     };
                 }
                 shopMenu.AddSubMenu(carImport);
@@ -122,7 +129,7 @@ namespace Core.Client
                 {
                     foreach (var item in items)
                     {
-                        if (item != null && item.Item != null)
+                        if (item != null && item.Quantity != 0 && item.Type != "weapon")
                         {
                             var invItem = new NativeListItem<string>($"{item.Item} ({item.Quantity})", "", "Utiliser", "Donner");
                             inventoryMenu.Add(invItem);
@@ -183,7 +190,7 @@ namespace Core.Client
                     TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     UseMouse = false
                 };
-                var weapons = JsonConvert.DeserializeObject<List<Weapon>>(PlayerInst.Inventory);
+                var weapons = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerInst.Inventory);
                 if (weapons != null)
                 {
                     foreach (var weapon in weapons)
@@ -197,20 +204,20 @@ namespace Core.Client
                                 break;
                             }
                         }
-                        if (weapon.WeaponName != null)
+                        if (weapon.Item != null && weapon.Type == "weapon")
                         {
-                            var weaponItem = new NativeListItem<string>($"{weapon.WeaponName}", "", "Équiper", "Déséquiper");
+                            var weaponItem = new NativeListItem<string>($"{weapon.Item}", "", "Équiper", "Déséquiper");
                             weaponsMenu.Add(weaponItem);
                             weaponItem.Activated += (sender, e) =>
                             {
                                 if (weaponItem.SelectedItem == "Équiper")
                                 {
-                                    GiveWeaponToPed(GetPlayerPed(-1), (uint)GetHashKey($"weapon_{weapon.WeaponName}"), 0, false, false);
-                                    SetPedAmmo(GetPlayerPed(-1), (uint)GetHashKey($"weapon_{weapon.WeaponName}"), ammo);
+                                    GiveWeaponToPed(GetPlayerPed(-1), (uint)GetHashKey($"weapon_{weapon.Item}"), 0, false, false);
+                                    SetPedAmmo(GetPlayerPed(-1), (uint)GetHashKey($"weapon_{weapon.Item}"), ammo);
                                 }
                                 else
                                 {
-                                    RemoveWeaponFromPed(GetPlayerPed(-1), (uint)GetHashKey($"weapon_{weapon.WeaponName}"));
+                                    RemoveWeaponFromPed(GetPlayerPed(-1), (uint)GetHashKey($"weapon_{weapon.Item}"));
                                 }
                             };
                         }
