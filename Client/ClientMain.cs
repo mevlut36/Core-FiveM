@@ -15,6 +15,8 @@ using System.Drawing;
 using LemonUI.Scaleform;
 using System.Runtime.CompilerServices;
 using LemonUI.Elements;
+using System.ComponentModel;
+using System.Xml.Linq;
 
 namespace Core.Client
 {
@@ -30,6 +32,7 @@ namespace Core.Client
         public LTDShop LTDShop;
         public ClothShop ClothShop;
         public VehicleSystem VehicleSystem;
+        public ContainerSystem ContainerSystem;
         public Vector3 dressPos = new Vector3(151.1f, -751.4f, 258.1f);
         public string Result = "";
         private Scaleform _scaleform;
@@ -40,7 +43,8 @@ namespace Core.Client
             Firstname = "",
             Lastname = "",
             Birth = "",
-            Clothes = ""
+            Clothes = "",
+            ClothesList = ""
         };
 
         public List<VehicleInfo> vehicles = new List<VehicleInfo>();
@@ -62,6 +66,7 @@ namespace Core.Client
             LTDShop = new LTDShop(this);
             ClothShop = new ClothShop(this);
             VehicleSystem = new VehicleSystem(this);
+            ContainerSystem = new ContainerSystem(this);
             EventHandlers["core:getPlayerData"] += new Action<string>(PlayerMenu.GetPlayerData);
             EventHandlers["core:receivePlayerMoney"] += new Action<int>(money =>
             {
@@ -130,23 +135,17 @@ namespace Core.Client
         [EventHandler("core:getClothes")]
         public void GetClothes(string json)
         {
-            JObject jsonObject = JObject.Parse(json);
-            var properties = jsonObject.Properties();
-            
-            foreach (var property in properties)
+            var clothesList = JsonConvert.DeserializeObject<List<ClothesInfo>>(json);
+
+            foreach (var clothes in clothesList)
             {
-                if (property.Value is JObject valueObject)
+                if (!string.IsNullOrEmpty(clothes.Name))
                 {
-                    var subProperties = valueObject.Properties();
-                    foreach (var subProperty in subProperties)
-                    {
-                        var subKey = subProperty.Name;
-                        var subValue = (int)subProperty.Value;
-                        DressPed(int.Parse(property.Name), int.Parse(subKey), subValue);
-                    }
+                    DressPed(clothes.Component, clothes.Drawable, clothes.Texture);
                 }
             }
         }
+
 
         public void DressPed(int componentId, int drawableId, int textureId)
         {
@@ -361,8 +360,12 @@ namespace Core.Client
                 { 7, "Accessoires" }
             };
 
+            var clothesInfoList = new List<ClothesInfo>();
+            var classClothes = new ClothesInfo { Name = "", Component = 0, Drawable = 0, Texture = 0, Palette = 1 };
+            var clothesInfoTempList = new List<ClothesInfo>();
             foreach (var clothes in componentDict)
             {
+                var clothesInfo = new ClothesInfo();
                 var itemDrawableList = Enumerable.Range(0, GetNumberOfPedDrawableVariations(GetPlayerPed(-1), clothes.Key)).ToList();
                 NativeListItem<int> itemDrawable = new NativeListItem<int>(clothes.Value, itemDrawableList.ToArray());
                 menu.Add(itemDrawable);
@@ -375,12 +378,19 @@ namespace Core.Client
                 {
                     SetPedComponentVariation(GetPlayerPed(-1), clothes.Key, itemDrawable.SelectedIndex, 0, 1);
                     itemTexture.SelectedIndex = 0;
+
+                    clothesInfo.Name = clothes.Value;
+                    clothesInfo.Component = clothes.Key;
+                    clothesInfo.Drawable = itemDrawable.SelectedIndex;
                 };
 
                 itemTexture.ItemChanged += (sender, e) =>
                 {
                     SetPedComponentVariation(GetPlayerPed(-1), clothes.Key, itemDrawable.SelectedIndex, itemTexture.SelectedIndex, 1);
+
+                    clothesInfo.Texture = itemTexture.SelectedIndex;
                 };
+                clothesInfoTempList.Add(clothesInfo);
             }
 
             var submit = new NativeItem("Envoyer");
@@ -388,27 +398,7 @@ namespace Core.Client
 
             submit.Activated += (sender, e) =>
             {
-                var clothesDict = new Dictionary<int, Dictionary<int, int>>();
-                foreach (var clothes in componentDict)
-                {
-                    var itemDrawable = menu.Items.OfType<NativeListItem<int>>().FirstOrDefault(item => item.Title == clothes.Value);
-                    var itemTexture = menu.Items.OfType<NativeListItem<int>>().FirstOrDefault(item => item.Title == $"~h~Texture~s~ {clothes.Value}");
-
-                    if (itemDrawable != null && itemTexture != null)
-                    {
-                        int selectedDrawableIndex = itemDrawable.SelectedIndex;
-                        int selectedTextureIndex = itemTexture.SelectedIndex;
-
-                        clothesDict.Add(clothes.Key, new Dictionary<int, int>
-                        {
-                            { selectedDrawableIndex, selectedTextureIndex }
-                        });
-                    }
-                }
-
-                string jsonClothes = JsonConvert.SerializeObject(clothesDict);
-                Player.Clothes = jsonClothes;
-
+                Player.ClothesList = JsonConvert.SerializeObject(clothesInfoTempList);
                 string json = JsonConvert.SerializeObject(Player);
                 TriggerServerEvent("core:registerPlayerData", json);
                 SetEntityCoords(GetPlayerPed(-1), -283.2f, -939.4f, 31.2f, true, false, false, true);
@@ -494,6 +484,7 @@ namespace Core.Client
             ClothShop.OnTick();
             VehicleSystem.OnTick();
             AmmuNation.GunShop();
+            ContainerSystem.OnTick();
 
             if (Game.PlayerPed != null && Game.PlayerPed.IsAlive)
             {
