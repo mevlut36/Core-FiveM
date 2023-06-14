@@ -82,8 +82,8 @@ namespace Core.Client
                         Pool.Add(menu);
                         menu.Visible = true;
 
-                        var dollarsAmount = items.FirstOrDefault(item => item.Item == "Dollars")?.Quantity ?? 0;
                         var dollarsItem = items.FirstOrDefault(item => item.Item == "Dollars");
+                        var dollarsAmount = dollarsItem?.Quantity ?? 0;
 
                         var myMoneyInBank = new NativeItem($"En banque: ~g~${PlayerMenu.PlayerInst.Money}", "Rien ne se crée, tout se transactionne");
                         var myMoney = new NativeItem($"En possession: ~g~${dollarsItem?.Quantity ?? 0}");
