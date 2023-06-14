@@ -63,6 +63,14 @@ namespace Core.Client
             new Vector3(1127.4f, 249.4f, 80.8f),
             new Vector3(1113.7f, 252.8f, 80.8f)
         };
+        
+        Vector3 placeCubeParkingKey = new Vector3(214.5f, -915.1f, 18.2f);
+        List<Vector3> placeCubeParkingValues = new List<Vector3>()
+        {
+            new Vector3(211, -883.7f, 18.2f),
+            new Vector3(222.4f, -879.3f, 18.2f),
+            new Vector3(231.5f, -885.5f, 18.2f)
+        };
 
         public List<VehicleInfo> CarList = new List<VehicleInfo>();
         public Parking(ClientMain caller)
@@ -77,12 +85,14 @@ namespace Core.Client
             parkingDict.Add(paletoParkingKey, paletoParkingValues);
             parkingDict.Add(vinewoodParkingKey, vinewoodParkingValues);
             parkingDict.Add(hippodromeParkingKey, hippodromeParkingValues);
+            parkingDict.Add(placeCubeParkingKey, placeCubeParkingValues);
 
             parkingEnterList.Add(new Vector3(-358.6f, -891.4f, 31f));
             parkingEnterList.Add(new Vector3(225.5f, -755.3f, 30.8f));
             parkingEnterList.Add(new Vector3(114.5f, 6611.6f, 31.8f));
             parkingEnterList.Add(new Vector3(57.2f, 28.8f, 70));
             parkingEnterList.Add(new Vector3(1115.6f, 264.4f, 80.5f));
+            parkingEnterList.Add(new Vector3(231.7f, -874, 18.2f));
             BaseScript.TriggerServerEvent("core:getVehicleInfo");
             foreach (var entry in parkingDict)
             {
