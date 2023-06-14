@@ -129,7 +129,7 @@ namespace Core.Client
                                 {
                                     if (item != null && item.Item != null)
                                     {
-                                        if (item.Type == "item" && item.Quantity != 0)
+                                        if (item.ItemType == "item" && item.Quantity != 0)
                                         {
                                             var invItem = new NativeItem($"{item.Item} ({item.Quantity})");
                                             drop.Add(invItem);
@@ -146,7 +146,7 @@ namespace Core.Client
                                                 }
                                                 drop.Visible = false;
                                             };
-                                        } else if (item.Type == "weapon" && item.Quantity != 0)
+                                        } else if (item.ItemType == "weapon" && item.Quantity != 0)
                                         {
                                             var invItem = new NativeItem($"{item.Item}");
                                             drop.Add(invItem);
