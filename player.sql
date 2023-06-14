@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le : ven. 09 juin 2023 à 23:06
+-- Généré le : mer. 14 juin 2023 à 17:35
 -- Version du serveur : 8.0.31
 -- Version de PHP : 8.0.26
 
@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS `player` (
   `firstname` varchar(50) NOT NULL,
   `lastname` varchar(50) NOT NULL,
   `clothes` text NOT NULL,
+  `clothes_list` text NOT NULL,
   `money` int NOT NULL DEFAULT '20000',
   `bills` text,
   `cars` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
@@ -44,11 +45,8 @@ CREATE TABLE IF NOT EXISTS `player` (
   `birth` varchar(10) NOT NULL,
   `last_position` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Déchargement des données de la table `player`
---
+) ENGINE=MyISAM AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
