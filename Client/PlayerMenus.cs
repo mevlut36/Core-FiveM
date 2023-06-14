@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CitizenFX.Core;
+using CitizenFX.Core.Native;
 using LemonUI;
 using LemonUI.Menus;
 using Newtonsoft.Json;
@@ -33,6 +34,7 @@ namespace Core.Client
             Bitcoin = 0,
             Birth = "",
             Clothes = "",
+            ClothesList = "",
             Money = 0,
             Bills = "",
             Inventory = ""
@@ -129,7 +131,7 @@ namespace Core.Client
                 {
                     foreach (var item in items)
                     {
-                        if (item != null && item.Quantity != 0 && item.Type != "weapon")
+                        if (item != null && item.ItemType == "item" && item.Quantity != 0)
                         {
                             var invItem = new NativeListItem<string>($"{item.Item} ({item.Quantity})", "", "Utiliser", "Donner");
                             inventoryMenu.Add(invItem);
@@ -146,6 +148,29 @@ namespace Core.Client
                     TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     UseMouse = false
                 };
+                var clothesInfo = JsonConvert.DeserializeObject<List<ClothesInfo>>(PlayerInst.ClothesList);
+                if (clothesInfo != null)
+                {
+                    foreach (var clothes in clothesInfo)
+                    {
+                        if (clothes.Name != null)
+                        {
+                            var clotheItem = new NativeListItem<string>($"{clothes.Name}", "", "Porter", "Enlever");
+                            clothMenu.Add(clotheItem);
+                            clotheItem.Activated += (sender, e) =>
+                            {
+                                if (clotheItem.SelectedItem == "Porter")
+                                {
+                                    SetPedComponentVariation(GetPlayerPed(-1), clothes.Component, clothes.Drawable, clothes.Texture, clothes.Palette);
+                                }
+                                else
+                                {
+                                    SetPedComponentVariation(GetPlayerPed(-1), clothes.Component, 15, 0, 2);
+                                }
+                            };
+                        }
+                    }
+                }
 
                 var billsMenu = new NativeMenu("Factures", "Factures")
                 {
@@ -190,10 +215,10 @@ namespace Core.Client
                     TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     UseMouse = false
                 };
-                var weapons = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerInst.Inventory);
-                if (weapons != null)
+
+                if (items != null)
                 {
-                    foreach (var weapon in weapons)
+                    foreach (var weapon in items)
                     {
                         var ammo = 0;
                         foreach (var item in items)
@@ -204,7 +229,9 @@ namespace Core.Client
                                 break;
                             }
                         }
-                        if (weapon.Item != null && weapon.Type == "weapon")
+
+
+                        if (weapon.Item != null && weapon.ItemType == "weapon")
                         {
                             var weaponItem = new NativeListItem<string>($"{weapon.Item}", "", "Équiper", "Déséquiper");
                             weaponsMenu.Add(weaponItem);
@@ -283,6 +310,7 @@ namespace Core.Client
             PlayerInst.Bitcoin = player.Bitcoin;
             PlayerInst.Birth = player.Birth;
             PlayerInst.Clothes = player.Clothes;
+            PlayerInst.ClothesList = player.ClothesList;
             PlayerInst.Money = player.Money;
             PlayerInst.Bills = player.Bills;
             PlayerInst.Inventory = player.Inventory;
