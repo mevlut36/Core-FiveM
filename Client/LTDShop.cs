@@ -40,6 +40,9 @@ namespace Core.Client
             LTDItems.Add(item3);
 
             // LTD LIST
+            LTDShopInfo ltd0 = new LTDShopInfo("Cube Place", new Vector3(190.1f, -889.8f, 30.6f), new Vector3(188.4f, -889.3f, 30.6f), new Vector3(187.6f, -899.5f, 30.6f));
+            LTDShops.Add(ltd0);
+            
             LTDShopInfo ltd1 = new LTDShopInfo("Strawberry", new Vector3(26.2f, -1346.9f, 29.3f), new Vector3(24.3f, -1346.6f, 29.3f), new Vector3(33.1f, -1347.9f, 29.3f));
             LTDShops.Add(ltd1);
 
@@ -144,7 +147,7 @@ namespace Core.Client
                                 {
                                     PlayerMenu.PlayerInst.Money -= result;
                                     PlayerMenu.PlayerInst.Inventory = JsonConvert.SerializeObject(items);
-                                    BaseScript.TriggerServerEvent("core:transaction", result, item.Name, parsedInput);
+                                    BaseScript.TriggerServerEvent("core:transaction", result, item.Name, parsedInput, "item");
                                     BaseScript.TriggerServerEvent("core:requestPlayerData");
                                     menu.Visible = false;
                                 }
