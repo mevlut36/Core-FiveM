@@ -33,6 +33,11 @@ namespace Core.Client
             Client = caller;
             Format = caller.Format;
             Parking = caller.Parking;
+            Blip myBlip = World.CreateBlip(Vendeur);
+            myBlip.Sprite = BlipSprite.PersonalVehicleCar;
+            myBlip.Color = BlipColor.Yellow;
+            myBlip.Name = "Concess Auto";
+            myBlip.IsShortRange = true;
         }
 
         public async void Previsualisation(string vehicle)
@@ -137,7 +142,6 @@ namespace Core.Client
                     }
                 };
 
-
                 menu.Closed += (sender, e) =>
                 {
                     Previsualisation_state = false;
@@ -192,7 +196,8 @@ namespace Core.Client
                 var mainMenu = new NativeMenu("Catalogue", "Bienvenue sur le catalogue")
                 {
                     TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
-                    UseMouse = false
+                    UseMouse = false,
+                    HeldTime = 100
                 };
                 var vehicleNames = System.Enum.GetNames(typeof(VehicleHash));
                 var vehicleClasses = new Dictionary<int, List<string>>
