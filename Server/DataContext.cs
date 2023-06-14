@@ -37,6 +37,8 @@ namespace Core.Server
         public string LastName { get; set; }
         [Column("clothes")]
         public string Clothes { get; set; }
+        [Column("clothes_list")]
+        public string ClothesList { get; set; }
         [Column("money")]
         public int Money { get; set; }
         [Column("bills")]
