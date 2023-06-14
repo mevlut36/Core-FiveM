@@ -1,6 +1,8 @@
 using CitizenFX.Core;
 using LemonUI;
+using LemonUI.Elements;
 using LemonUI.Menus;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -99,8 +101,7 @@ namespace Core.Client
                                     if (PlayerMenu.PlayerInst.Money >= kvp2.Value)
                                     {
                                         Format.SendNotif($"~g~Vous avez bien acheté {weapon.Key}");
-                                        BaseScript.TriggerServerEvent("core:transaction", kvp2.Value);
-                                        BaseScript.TriggerServerEvent("core:addWeapon", kvp2.Key.ToString());
+                                        BaseScript.TriggerServerEvent("core:buyWeapon", kvp2.Key.ToString(), kvp2.Value);
                                         BaseScript.TriggerServerEvent("core:requestPlayerData");
                                     }
                                     else
@@ -112,6 +113,27 @@ namespace Core.Client
                                 menu.UseMouse = false;
                             }
                         }
+                        var ammo = new NativeItem("Munitions", "", "~g~$200");
+                        menu.Add(ammo);
+                        var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerMenu.PlayerInst.Inventory);
+                        ammo.Activated += async (sender, e) =>
+                        {
+                            var textInput = await Format.GetUserInput("Quantité", "1", 4);
+                            var parsedInput = Int32.Parse(textInput);
+                            var result = 200 * parsedInput;
+                            if (result <= PlayerMenu.PlayerInst.Money)
+                            {
+                                PlayerMenu.PlayerInst.Money -= result;
+                                PlayerMenu.PlayerInst.Inventory = JsonConvert.SerializeObject(items);
+                                BaseScript.TriggerServerEvent("core:transaction", result, "Munitions", parsedInput, "item");
+                                BaseScript.TriggerServerEvent("core:requestPlayerData");
+                                menu.Visible = false;
+                            }
+                            else
+                            {
+                                Format.SendNotif("~r~La somme est trop élevée");
+                            }
+                        };
                     }
                 }
             }
