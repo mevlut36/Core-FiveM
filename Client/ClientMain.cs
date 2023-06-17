@@ -1,22 +1,14 @@
-using System;
-using System.Threading.Tasks;
 using CitizenFX.Core;
-using static CitizenFX.Core.Native.API;
-using Newtonsoft.Json;
-using System.Collections.Generic;
-using LemonUI.Menus;
-using System.Linq;
-using LemonUI;
 using CitizenFX.Core.Native;
-using Mono.CSharp;
-using Newtonsoft.Json.Linq;
-using System.Text.RegularExpressions;
+using LemonUI;
+using LemonUI.Menus;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
 using System.Drawing;
-using LemonUI.Scaleform;
-using System.Runtime.CompilerServices;
-using LemonUI.Elements;
-using System.ComponentModel;
-using System.Xml.Linq;
+using System.Linq;
+using System.Threading.Tasks;
+using static CitizenFX.Core.Native.API;
 
 namespace Core.Client
 {
@@ -37,9 +29,11 @@ namespace Core.Client
         public string Result = "";
         private Scaleform _scaleform;
 
+        SkinInfo Skin = new SkinInfo();
+
         PlayerInstance Player = new PlayerInstance
         {
-            Gender = "",
+            Skin = "",
             Firstname = "",
             Lastname = "",
             Birth = "",
@@ -51,12 +45,21 @@ namespace Core.Client
 
         public int PlayerMoney = 0;
         public Vehicle MyVehicle;
+
+        private bool IsDead = false;
+        private DateTime DeathTime;
         public ClientMain()
         {
             Debug.WriteLine("Hi from Core.Client!");
             EventHandlers["playerSpawned"] += new Action(OnPlayerConnecting);
-            EventHandlers["baseevents:onPlayerDied"] += new Action<int, dynamic>(OnDeath);
             EventHandlers["onClientResourceStart"] += new Action<string>(OnClientStart);
+            EventHandlers["baseevents:onPlayerDied"] += new Action<dynamic>(dyn =>
+            {
+                SetEntityHealth(GetPlayerPed(-1), 100);
+                DeathAnimation(600000);
+                StartScreenEffect("DeathFailMPIn", 0, false);
+                CreateCinematicShot(-1096069633, 2000, 0, GetPlayerPed(-1));
+            });
             Format = new Format(this);
             Parking = new Parking(this);
             ConcessAuto = new ConcessAuto(this);
@@ -73,7 +76,6 @@ namespace Core.Client
                 PlayerMoney = money;
             });
             _scaleform = new Scaleform("mp_car_stats_01");
-            
         }
 
         [EventHandler("core:receivePlayerMoney")]
@@ -85,39 +87,33 @@ namespace Core.Client
         public void OnClientStart(string text)
         {
             UpdatePlayer();
+            RegisterCommand("revive", new Action<int, int, string>((source, args, raw) =>
+            {
+                SetEntityHealth(GetPlayerPed(args), 200);
+                Format.SendNotif($"Revived {args}");
+            }), false);
         }
 
         public void OnPlayerConnecting()
         {
             TriggerServerEvent("core:isPlayerRegistered");
         }
-
-        public void OnDeath(int playerId, dynamic deathCoords)
+        public async void DeathAnimation(int time)
         {
-            if (playerId != PlayerId())
-                return;
-            var LocalPlayer = GetLocalPlayer();
-            Format.SendNotif("Vous êtes mort");
-            SetEntityCoordsNoOffset(GetPlayerPed(-1), LocalPlayer.Character.Position.X, LocalPlayer.Character.Position.Y, LocalPlayer.Character.Position.Z, false, false, false);
-            NetworkResurrectLocalPlayer(LocalPlayer.Character.Position.X, LocalPlayer.Character.Position.Y, LocalPlayer.Character.Position.Z, LocalPlayer.Character.Heading, true, false);
-            SetPlayerInvincible(GetPlayerPed(-1), false);
-            DeathAnimation();
-        }
-
-        public async void DeathAnimation()
-        {
-            Function.Call(Hash.REQUEST_ANIM_DICT, "anim@gangops@morgue@table@");
-            while (!Function.Call<bool>(Hash.HAS_ANIM_DICT_LOADED, "anim@gangops@morgue@table@")) await BaseScript.Delay(50);
+            Function.Call(Hash.REQUEST_ANIM_DICT, "dead");
+            while (!Function.Call<bool>(Hash.HAS_ANIM_DICT_LOADED, "dead")) await BaseScript.Delay(50);
             Game.PlayerPed.Task.ClearAllImmediately();
             AnimationFlags flags = AnimationFlags.Loop;
-            Game.PlayerPed.Task.PlayAnimation("anim@gangops@morgue@table@", "ko_front", -1, 5000, flags);
+            Game.PlayerPed.Task.PlayAnimation("dead", "dead_a", -1, time, flags);
             ClearPedBloodDamage(GetPlayerPed(-1));
         }
 
-        [EventHandler("core:getGender")]
-        public async void GetGender(string gender)
+        [EventHandler("core:getSkin")]
+        public async void GetGender(string json)
         {
-            var pedHash = gender == "Femme" ? PedHash.FreemodeFemale01 : PedHash.FreemodeMale01;
+            var gender = JsonConvert.DeserializeObject<SkinInfo>(json);
+
+            var pedHash = gender.Gender == "Femme" ? PedHash.FreemodeFemale01 : PedHash.FreemodeMale01;
             var model = new Model(pedHash);
             RequestModel(model);
             while (!model.IsLoaded)
@@ -133,10 +129,12 @@ namespace Core.Client
         }
 
         [EventHandler("core:getClothes")]
-        public void GetClothes(string json)
+        public void GetClothes(string json, string skinJson)
         {
             var clothesList = JsonConvert.DeserializeObject<List<ClothesInfo>>(json);
-
+            var ped = GetPlayerPed(-1);
+            var skin = JsonConvert.DeserializeObject<SkinInfo>(skinJson);
+            Skin = skin;
             foreach (var clothes in clothesList)
             {
                 if (!string.IsNullOrEmpty(clothes.Name))
@@ -144,8 +142,16 @@ namespace Core.Client
                     DressPed(clothes.Component, clothes.Drawable, clothes.Texture);
                 }
             }
-        }
 
+            SetPedComponentVariation(ped, 2, Skin.Hair, Skin.HairColor, 0);
+            SetPedHairColor(ped, Skin.HairColor, 1);
+            SetPedHeadBlendData(ped, Skin.Mom, Skin.Dad, Skin.Dad, Skin.Mom, Skin.Dad, Skin.Dad, Skin.DadMomPercent * 0.1f, Skin.DadMomPercent * 0.1f, 1.0f, false);
+            SetPedEyeColor(ped, Skin.EyeColor);
+            SetPedHeadOverlay(ped, 1, Skin.Beard, Skin.BeardOpacity * 0.1f);
+            SetPedHeadOverlayColor(ped, 1, 1, Skin.BeardColor, Skin.BeardColor);
+            SetPedHeadOverlay(ped, 2, Skin.Eyebrow, 10 * 0.1f);
+            SetPedHeadOverlayColor(ped, 1, 1, 1, 1);
+        }
 
         public void DressPed(int componentId, int drawableId, int textureId)
         {
@@ -226,7 +232,8 @@ namespace Core.Client
                         SetPlayerModel(PlayerId(), modelMale);
                         SetPedDefaultComponentVariation(GetPlayerPed(-1));
                     }
-                } else
+                }
+                else
                 {
                     var modelFemale = new Model(PedHash.FreemodeMale01);
                     RequestModel(modelFemale);
@@ -239,7 +246,7 @@ namespace Core.Client
                         SetPlayerModel(PlayerId(), modelFemale);
                         SetPedDefaultComponentVariation(GetPlayerPed(-1));
                     }
-                } 
+                }
             };
 
             firstnameItem.Activated += async (sender, e) =>
@@ -258,12 +265,13 @@ namespace Core.Client
 
             birthItem.Activated += async (sender, e) =>
             {
-                var textInput = await Format.GetUserInput("Date de naissance", "20/04/1889", 20);
+                var textInput = await Format.GetUserInput("Date de naissance", "20/04/1990", 20);
                 if (Format.IsValidDateFormat(textInput))
                 {
                     birthItem.AltTitle = textInput;
                     birth = textInput;
-                } else
+                }
+                else
                 {
                     Format.CustomNotif("Le format n'est pas valide");
                 }
@@ -271,20 +279,28 @@ namespace Core.Client
 
             submit.Activated += (sender, e) =>
             {
-                menu.Visible = false;
-                Pool.Remove(menu);
-                Format.CustomNotif("Vos informations ont bien été enregistré");
-                
-                Player.Gender = gender;
-                Player.Firstname = firstname;
-                Player.Lastname = lastname;
-                Player.Birth = birth;
-                Player.Inventory = "[]";
-                Player.Bills = "[]";
-                DressMenu();
+                if (string.IsNullOrEmpty(firstname) || string.IsNullOrEmpty(lastname) || string.IsNullOrEmpty(birth))
+                {
+                    Format.CustomNotif("Vous devez renseigner toutes les informations");
+                }
+                else
+                {
+                    menu.Visible = false;
+                    Pool.Remove(menu);
+                    Format.CustomNotif("Vos informations ont bien été enregistré");
+
+                    Skin.Gender = gender;
+                    Player.Firstname = firstname;
+                    Player.Lastname = lastname;
+                    Player.Birth = birth;
+                    Player.Inventory = "[]";
+                    Player.Bills = "[]";
+                    SkintonMenu();
+                }
             };
 
-            menu.Closing += (sender, e) => {
+            menu.Closing += (sender, e) =>
+            {
                 if (string.IsNullOrEmpty(firstname) || string.IsNullOrEmpty(lastname) || string.IsNullOrEmpty(birth))
                 {
                     e.Cancel = true;
@@ -295,49 +311,142 @@ namespace Core.Client
             Pool.Add(menu);
         }
 
-        [EventHandler("core:createSkin")]
-        public void CreateSkin()
-        {
-            DressMenu();
-        }
-
-        private void ChangeHair()
+        private void SkintonMenu()
         {
             var ped = Game.PlayerPed.Handle;
-            var menu = new NativeMenu("Coiffures")
+            var player = GetPlayerPed(-1);
+
+            List<string> fathers = Format.parentFace.Where(x => x.Substring(2, 1) == "M").ToList();
+            List<string> mothers = Format.parentFace.Where(x => x.Substring(2, 1) == "F").ToList();
+
+            var menu = new NativeMenu("Skin", "Skin maker")
             {
                 Visible = true,
                 UseMouse = false,
                 HeldTime = 100
             };
+            Pool.Add(menu);
 
             var hairItem = new NativeListItem<int>("Cheveux", 0);
-            
-            for (int i = 0; i <= GetNumHairColors(); i++)
+            for (int i = 1; i <= GetNumHairColors(); i++)
             {
                 hairItem.Items.Add(i);
             }
-            var colorItem = new NativeListItem<int>("Couleur", 0);
+            var hairColorItem = new NativeListItem<int>("Couleur", 0);
             for (int i = 1; i <= GetNumHairColors(); i++)
             {
-                colorItem.Items.Add(i);
+                hairColorItem.Items.Add(i);
+            }
+            var dadItem = new NativeListItem<int>("Père", "", 0, 1);
+            for (int i = 0; i <= fathers.Count; i++)
+            {
+                dadItem.Items.Add(i);
+            }
+            var momItem = new NativeListItem<int>("Mère", "", 0, 1);
+            for (int i = 0; i <= mothers.Count; i++)
+            {
+                momItem.Items.Add(i);
+            }
+
+            var eyeColorItem = new NativeListItem<int>("Couleur des yeux", "", 0);
+            for (int i = 1; i <= 31; i++)
+            {
+                eyeColorItem.Items.Add(i);
+            }
+
+            var beardItem = new NativeListItem<int>("Barbe", "", 0);
+            for (int i = 1; i <= 31; i++)
+            {
+                beardItem.Items.Add(i);
+            }
+
+            var beardColorItem = new NativeListItem<int>("Couleur de barbe", "", 0);
+            for (int i = 1; i <= GetNumHairColors(); i++)
+            {
+                beardColorItem.Items.Add(i);
+            }
+            var eyebrowItem = new NativeListItem<int>("Sourcils", "", 0);
+            for (int i = 1; i <= 33; i++)
+            {
+                eyebrowItem.Items.Add(i);
             }
 
             menu.Add(hairItem);
-            menu.Add(colorItem);
-
-            Pool.Add(menu);
+            menu.Add(hairColorItem);
+            menu.Add(dadItem);
+            menu.Add(momItem);
+            menu.Add(eyeColorItem);
+            menu.Add(beardItem);
+            menu.Add(beardColorItem);
+            menu.Add(eyebrowItem);
 
             hairItem.ItemChanged += (sender, e) =>
             {
-                SetPedComponentVariation(ped, 2, hairItem.SelectedIndex, colorItem.SelectedIndex, 0);
-                SetPedHairColor(ped, colorItem.SelectedIndex, 1);
+                Skin.Hair = hairItem.SelectedIndex;
+                SetPedComponentVariation(ped, 2, hairItem.SelectedIndex, hairColorItem.SelectedIndex, 0);
+                SetPedHairColor(ped, hairColorItem.SelectedIndex, 1);
             };
 
-            colorItem.ItemChanged += (sender, e) =>
+            hairColorItem.ItemChanged += (sender, e) =>
             {
-                SetPedComponentVariation(ped, 2, hairItem.SelectedIndex, colorItem.SelectedIndex, 0);
-                SetPedHairColor(ped, colorItem.SelectedIndex, 1);
+                Skin.HairColor = hairColorItem.SelectedIndex;
+                SetPedComponentVariation(ped, 2, hairItem.SelectedIndex, hairColorItem.SelectedIndex, 0);
+                SetPedHairColor(ped, Skin.HairColor, Skin.HairColor);
+            };
+
+            dadItem.ItemChanged += (sender, e) =>
+            {
+                Skin.Dad = dadItem.SelectedItem;
+                SetPedHeadBlendData(player, Skin.Mom, Skin.Dad, Skin.Dad, Skin.Mom, Skin.Dad, Skin.Dad, Skin.DadMomPercent * 0.1f, Skin.DadMomPercent * 0.1f, 1.0f, false);
+            };
+
+            momItem.ItemChanged += (sender, e) =>
+            {
+                Skin.Mom = 20 + momItem.SelectedItem;
+                SetPedHeadBlendData(player, Skin.Mom, Skin.Dad, Skin.Mom, Skin.Mom, Skin.Dad, Skin.Mom, Skin.DadMomPercent * 0.1f, Skin.DadMomPercent * 0.1f, 1.0f, false);
+            };
+
+            eyeColorItem.ItemChanged += (sender, e) =>
+            {
+                Skin.EyeColor = eyeColorItem.SelectedItem;
+                SetPedEyeColor(player, Skin.EyeColor);
+            };
+
+            beardItem.ItemChanged += (sender, e) =>
+            {
+                Skin.Beard = beardItem.SelectedItem;
+                Skin.BeardOpacity = 100;
+                SetPedHeadOverlay(player, 1, Skin.Beard, Skin.BeardOpacity * 0.1f);
+            };
+
+            beardColorItem.ItemChanged += (sender, e) =>
+            {
+                Skin.BeardColor = beardColorItem.SelectedItem;
+                SetPedHeadOverlayColor(player, 1, 1, Skin.BeardColor, Skin.BeardColor);
+            };
+
+            eyebrowItem.ItemChanged += (sender, e) =>
+            {
+                Skin.Eyebrow = eyebrowItem.SelectedItem;
+                Skin.EyebrowOpacity = 10;
+                SetPedHeadOverlay(player, 2, Skin.Eyebrow, 10 * 0.1f);
+                SetPedHeadOverlayColor(player, 1, 1, 1, 1);
+            };
+
+            var submit = new NativeItem("Enregistrer", "");
+            menu.Add(submit);
+
+            submit.Activated += (sender, e) =>
+            {
+                menu.Visible = false;
+                Pool.Remove(menu);
+                Player.Skin = JsonConvert.SerializeObject(Skin);
+                DressMenu();
+            };
+
+            menu.Closing += (sender, e) =>
+            {
+                e.Cancel = true;
             };
         }
 
@@ -468,12 +577,22 @@ namespace Core.Client
         }
 
         [Tick]
-        public Task OnTick()
+        public async Task OnTick()
         {
             Pool.Process();
             var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
-            Format.SendTextUI($"{playerCoords}");
-            PopulationManaged();
+            // Debug.WriteLine($"{playerCoords}");
+            for (int i = 0; i <= 15; i++)
+            {
+                EnableDispatchService(i, false);
+            }
+            if (GetPlayerWantedLevel(PlayerId()) > 0)
+            {
+                SetPlayerWantedLevel(PlayerId(), 0, false);
+                SetPlayerWantedLevelNow(PlayerId(), false);
+            }
+
+            await PopulationManaged();
 
             PlayerMenu.F5Menu();
             PlayerMenu.F6Menu();
@@ -485,29 +604,76 @@ namespace Core.Client
             VehicleSystem.OnTick();
             AmmuNation.GunShop();
             ContainerSystem.OnTick();
-
             if (Game.PlayerPed != null && Game.PlayerPed.IsAlive)
             {
                 _scaleform.Render2DScreenSpace(new PointF(0.1f, 0.9f), new PointF(0.2f, 0.1f));
                 DrawPlayerHealthBar();
             }
-            
-            return Task.FromResult(0);
+
+            if (IsPedFatallyInjured(GetPlayerPed(-1)))
+            {
+                IsDead = true;
+                DeathTime = DateTime.UtcNow;
+            }
+
+            if (IsDead)
+            {
+                var totalMinutes = 10 - (int)Math.Floor((DateTime.UtcNow - DeathTime).TotalMinutes);
+                if (totalMinutes >= 6)
+                {
+                    Format.SendTextUI($"~r~Vous êtes mort\nRéappartion possible dans {totalMinutes}min");
+                }
+                if (totalMinutes <= 5)
+                {
+                    Format.SendTextUI($"~r~Vous êtes mort\nRéappartion possible dans {totalMinutes}min");
+                    Format.SendTextUI($"\n\n~r~! Réappartion avancée, appuyer sur ~g~E~r~, coût: ~g~$10000 ~r~!");
+                    if (IsControlPressed(0, 38))
+                    {
+                        if (PlayerMenu.PlayerInst.Money >= 10000)
+                        {
+                            Format.SendNotif("~g~Vous êtes apparu à l'Hopital");
+                            IsDead = false;
+                            SetEntityHealth(GetPlayerPed(-1), 200);
+                            PlayerMenu.PlayerInst.Money -= 10000;
+                            TriggerServerEvent("core:requestPlayerData");
+                            DeathAnimation(1);
+                            StartScreenEffect("DeathFailFranklinIn", 0, false);
+                            SetEntityCoords(GetPlayerPed(-1), -457.6f, -283.3f, 36.3f, true, false, true, false);
+                        } else
+                        {
+                            Format.SendNotif("~r~Vous n'avez pas assez d'argent...");
+                        }
+                    }
+                } else if (totalMinutes <= 0)
+                {
+                    IsDead = false;
+                    StartScreenEffect("DeathFailFranklinIn", 0, false);
+                    SetEntityHealth(GetPlayerPed(-1), 200);
+                    SetEntityCoords(GetPlayerPed(-1), -457.6f, -283.3f, 36.3f, true, false, true, false);
+                }
+                if (GetEntityHealth(GetPlayerPed(-1)) >= 175)
+                {
+                    IsDead = false;
+                    DeathAnimation(1);
+                    StartScreenEffect("DeadlineNeon", 0, false);
+                }
+            }
         }
+
         public Task PopulationManaged()
         {
-            SetVehicleDensityMultiplierThisFrame(0.5f);
-            SetPedDensityMultiplierThisFrame(0.5f);
-            SetRandomVehicleDensityMultiplierThisFrame(0.5f);
-            SetParkedVehicleDensityMultiplierThisFrame(0.5f);
-            SetScenarioPedDensityMultiplierThisFrame(0.5f, 0.5f);
+            SetVehicleDensityMultiplierThisFrame(0.05f);
+            SetPedDensityMultiplierThisFrame(0.05f);
+            SetRandomVehicleDensityMultiplierThisFrame(0.05f);
+            SetParkedVehicleDensityMultiplierThisFrame(0.05f);
+            SetScenarioPedDensityMultiplierThisFrame(0.0f, 0.05f);
             return Task.FromResult(0);
         }
         public Player GetLocalPlayer() => this.LocalPlayer;
-        public void SpawnPnj(Model ped, float x, float y, float z, float heading = 0f)
+        public void SpawnPnj(Model ped, Vector3 coords, float heading = 0f)
         {
             ped.Request();
-            var shop = World.CreatePed(ped, new Vector3(x, y, z), heading);
+            var shop = World.CreatePed(ped, coords, heading);
             FreezeEntityPosition(shop.Result.Handle, true);
             SetEntityInvincible(shop.Result.Handle, true);
             SetBlockingOfNonTemporaryEvents(shop.Result.Handle, true);
