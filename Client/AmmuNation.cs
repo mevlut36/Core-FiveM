@@ -1,4 +1,4 @@
-using CitizenFX.Core;
+﻿using CitizenFX.Core;
 using LemonUI;
 using LemonUI.Elements;
 using LemonUI.Menus;

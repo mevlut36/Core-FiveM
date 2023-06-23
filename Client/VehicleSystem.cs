@@ -1,4 +1,4 @@
-using CitizenFX.Core;
+﻿using CitizenFX.Core;
 using LemonUI;
 using LemonUI.Menus;
 using Newtonsoft.Json;
@@ -13,11 +13,10 @@ namespace Core.Client
 {
     public class VehicleSystem
     {
-        public ClientMain Client;
-        public Format Format;
-        public PlayerMenu PlayerMenu;
-        public ObjectPool Pool = new ObjectPool();
-        public BaseScript BaseScript;
+        ClientMain Client;
+        Format Format;
+        PlayerMenu PlayerMenu;
+        ObjectPool Pool = new ObjectPool();
 
         public VehicleSystem(ClientMain caller)
         {
@@ -25,8 +24,32 @@ namespace Core.Client
             Client = caller;
             Format = caller.Format;
             PlayerMenu = caller.PlayerMenu;
-        }
 
+            Client.AddEvent("core:changeLockState", new Action<int, string, int>(ChangeLockState));
+            Client.AddEvent("core:getCarInformation", new Action(GetCarInformation));
+        }
+        public void GetCarInformation()
+        {
+            Vehicle vehicle = Client.GetLocalPlayer().Character.CurrentVehicle;
+
+            if (vehicle != null)
+            {
+                string modelName = GetDisplayNameFromVehicleModel(vehicle.Model);
+                string licensePlate = GetVehicleNumberPlateText(vehicle.Handle);
+                int engineLevel = GetVehicleMod(vehicle.Handle, 11);
+                int brakeLevel = GetVehicleMod(vehicle.Handle, 12);
+                var carInfo = new
+                {
+                    Model = modelName,
+                    LicensePlate = licensePlate,
+                    EngineLevel = engineLevel,
+                    BrakeLevel = brakeLevel,
+                };
+
+                string json = JsonConvert.SerializeObject(carInfo);
+                BaseScript.TriggerServerEvent("core:receiveCarInformation", json);
+            }
+        }
         public void SetVehicleDoorsState()
         {
             Vehicle closestVehicle = World.GetClosest<Vehicle>(GetEntityCoords(GetPlayerPed(-1), true), World.GetAllVehicles());
@@ -41,7 +64,25 @@ namespace Core.Client
                 Debug.WriteLine("Aucun véhicule trouvé à proximité.");
             }
         }
-
+        public void ChangeLockState(int id, string plate, int isLock)
+        {
+            if (isLock == 2 || isLock == 0)
+            {
+                SetVehicleDoorsLocked(id, 1);
+                PlayVehicleDoorOpenSound(id, 1);
+                Format.SendNotif("~g~Vous avez ouvert votre voiture");
+            }
+            else if (isLock == 1)
+            {
+                SetVehicleDoorsLocked(id, 2);
+                PlayVehicleDoorOpenSound(id, 2);
+                Format.SendNotif("~r~Vous avez fermé votre voiture");
+            }
+            else
+            {
+                Format.SendNotif("Valeur de verrouillage non valide");
+            }
+        }
         public void GetVehicleBoot()
         {
             Vehicle closestVehicle = World.GetClosest<Vehicle>(GetEntityCoords(GetPlayerPed(-1), true), World.GetAllVehicles());
@@ -177,6 +218,18 @@ namespace Core.Client
 
         public void OnTick()
         {
+            if (IsPedInAnyVehicle(GetPlayerPed(-1), false))
+            {
+                var seatList = new List<int> { 157, 158, 160, 164 };
+                for (int i = 0; i < seatList.Count; i++)
+                {
+                    if (IsControlJustPressed(0, seatList[i]))
+                    {
+                        SetPedIntoVehicle(GetPlayerPed(-1), GetVehiclePedIsIn(GetPlayerPed(-1), false), i);
+                    }
+                }
+
+            }
             if (IsControlJustPressed(0, 303))
             {
                 SetVehicleDoorsState();

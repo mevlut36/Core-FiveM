@@ -1,4 +1,4 @@
-using CitizenFX.Core;
+﻿using CitizenFX.Core;
 using LemonUI;
 using LemonUI.Menus;
 using Newtonsoft.Json;
@@ -13,11 +13,10 @@ namespace Core.Client
 {
     public class LTDShop
     {
-        public ClientMain Client;
-        public Format Format;
-        public ObjectPool Pool = new ObjectPool();
-        public BaseScript BaseScript;
-        public PlayerMenu PlayerMenu;
+        ClientMain Client;
+        Format Format;
+        ObjectPool Pool = new ObjectPool();
+        PlayerMenu PlayerMenu;
 
         List<LTDShopInfo> LTDShops = new List<LTDShopInfo>();
         List<LTDItems> LTDItems = new List<LTDItems>();
@@ -148,7 +147,7 @@ namespace Core.Client
                                     PlayerMenu.PlayerInst.Money -= result;
                                     PlayerMenu.PlayerInst.Inventory = JsonConvert.SerializeObject(items);
                                     BaseScript.TriggerServerEvent("core:transaction", result, item.Name, parsedInput, "item");
-                                    BaseScript.TriggerServerEvent("core:requestPlayerData");
+                                    Client.UpdatePlayer();
                                     menu.Visible = false;
                                 }
                                 else

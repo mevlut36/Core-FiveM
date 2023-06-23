@@ -1,4 +1,4 @@
-using CitizenFX.Core;
+﻿using CitizenFX.Core;
 using CitizenFX.Core.UI;
 using LemonUI;
 using LemonUI.Menus;
@@ -13,11 +13,8 @@ namespace Core.Client
 {
     public class ContainerSystem
     {
-        public ClientMain Client;
-        public Format Format;
-        public ObjectPool Pool = new ObjectPool();
-        public BaseScript BaseScript;
-        public PlayerMenu PlayerMenu;
+        Format Format;
+        ObjectPool Pool = new ObjectPool();
 
         Vector3 Point = new Vector3(259.5f, -782.9f, 30.2f);
         Vector3 OutPoint = new Vector3(238.6f, -772.1f, 30.7f);
@@ -25,9 +22,7 @@ namespace Core.Client
         public ContainerSystem(ClientMain caller)
         {
             Pool = caller.Pool;
-            Client = caller;
             Format = caller.Format;
-            PlayerMenu = caller.PlayerMenu;
         }
 
         public void ContainerInterface()

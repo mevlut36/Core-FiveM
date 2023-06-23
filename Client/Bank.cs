@@ -1,4 +1,4 @@
-using CitizenFX.Core;
+﻿using CitizenFX.Core;
 using LemonUI;
 using LemonUI.Menus;
 using Newtonsoft.Json;
@@ -13,10 +13,8 @@ namespace Core.Client
 {
     public class Bank
     {
-        public ClientMain Client;
         public Format Format;
         public ObjectPool Pool = new ObjectPool();
-        public BaseScript BaseScript;
         public PlayerMenu PlayerMenu;
 
         List<BankInfo> Banks = new List<BankInfo>();
@@ -24,7 +22,6 @@ namespace Core.Client
         public Bank(ClientMain caller)
         {
             Pool = caller.Pool;
-            Client = caller;
             Format = caller.Format;
             PlayerMenu = caller.PlayerMenu;
 

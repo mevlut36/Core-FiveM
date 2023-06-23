@@ -1,4 +1,4 @@
-using CitizenFX.Core;
+﻿using CitizenFX.Core;
 using CitizenFX.Core.Native;
 using LemonUI;
 using LemonUI.Menus;
@@ -16,10 +16,9 @@ namespace Core.Client
 {
     public class Parking
     {
-        public ClientMain Client;
-        public Format Format;
-        public ObjectPool Pool = new ObjectPool();
-        public BaseScript BaseScript;
+        ClientMain Client;
+        Format Format;
+        ObjectPool Pool = new ObjectPool();
         VehicleSystem VehicleSystem;
         public Dictionary<Vector3, List<Vector3>> parkingDict = new Dictionary<Vector3, List<Vector3>>();
         public List<Vector3> parkingEnterList = new List<Vector3>();
@@ -80,6 +79,7 @@ namespace Core.Client
             Format = caller.Format;
             VehicleSystem = caller.VehicleSystem;
             Client.AddEvent("core:sendVehicleInfos", new Action<string, int>(GetVehicles));
+
             parkingDict.Add(redParkingKey, redParkingValues);
             parkingDict.Add(centralParkingKey, centralParkingValues);
             parkingDict.Add(paletoParkingKey, paletoParkingValues);

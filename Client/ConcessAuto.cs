@@ -1,4 +1,4 @@
-using CitizenFX.Core;
+﻿using CitizenFX.Core;
 using Core.Client;
 using LemonUI;
 using LemonUI.Menus;
@@ -15,11 +15,10 @@ namespace Core.Client
 {
     public class ConcessAuto
     {
-        public ClientMain Client;
-        public Format Format;
-        public Parking Parking;
-        public ObjectPool Pool = new ObjectPool();
-        public BaseScript BaseScript;
+        ClientMain Client;
+        Format Format;
+        Parking Parking;
+        ObjectPool Pool = new ObjectPool();
 
         public Vector3 vehicleOut = new Vector3(-47.1f, -1113.3f, 26.44f);
         public Vector3 Vendeur = new Vector3(-41.5f, -1114.1f, 25.6f);

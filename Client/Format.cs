@@ -1,26 +1,68 @@
-using CitizenFX.Core;
+﻿using CitizenFX.Core;
 using CitizenFX.Core.Native;
-using Core.Client;
-using LemonUI;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using static CitizenFX.Core.Native.API;
-using static CitizenFX.Core.UI.Screen;
 
 namespace Core.Client
 {
     public class Format
     {
-        public ClientMain Client;
-        public ObjectPool Pool = new ObjectPool();
         public Format(ClientMain caller)
         {
-            Pool = caller.Pool;
-            Client = caller;
+            
         }
+
+        public List<string> parentFace = new List<string>
+        {
+            "00M Benjamin",
+            "01M Daniel",
+            "02M Joshua",
+            "03M Noah",
+            "04M Andrew",
+            "05M Joan",
+            "06M Alex",
+            "07M Isaac",
+            "08M Evan",
+            "09M Ethan",
+            "10M Vincent",
+            "11M Angel",
+            "12M Diego",
+            "13M Adrian",
+            "14M Gabriel",
+            "15M Michael",
+            "16M Santiago",
+            "17M Kevin",
+            "18M Louis",
+            "19M Samuel",
+            "20M Anthony",
+            "42M John",
+            "43M Niko",
+            "44M Claude",
+            "21F Hannah",
+            "22F Audrey",
+            "23F Jasmine",
+            "24F Giselle",
+            "25F Amelia",
+            "26F Isabella",
+            "27F Zoe",
+            "28F Ava",
+            "29F Camilla",
+            "30F Violet",
+            "31F Sophia",
+            "32F Eveline",
+            "33F Nicole",
+            "34F Ashley",
+            "35F Grace",
+            "36F Brianna",
+            "37F Natalie",
+            "38F Olivia",
+            "39F Elizabeth",
+            "40F Charlotte",
+            "41F Emma",
+            "45F Misty"
+        };
+
         /*
          * Format JSON Request from server-side
          */
@@ -128,6 +170,7 @@ namespace Core.Client
         {
             if (date.Length != 10)
             {
+                SendNotif("Le format n'est pas valide");
                 return false;
             }
 
@@ -135,11 +178,13 @@ namespace Core.Client
 
             if (parts.Length != 3)
             {
+                SendNotif("Il manque le mois jour ou année");
                 return false;
             }
 
             if (!int.TryParse(parts[0], out int day) || !int.TryParse(parts[1], out int month) || !int.TryParse(parts[2], out int year))
             {
+                SendNotif("C'est bon chef");
                 return false;
             }
 

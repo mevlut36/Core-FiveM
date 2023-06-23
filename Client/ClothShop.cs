@@ -1,4 +1,4 @@
-using CitizenFX.Core;
+﻿using CitizenFX.Core;
 using LemonUI;
 using LemonUI.Menus;
 using Newtonsoft.Json;
@@ -13,18 +13,15 @@ namespace Core.Client
 {
     public class ClothShop
     {
-        public ClientMain Client;
-        public Format Format;
-        public ObjectPool Pool = new ObjectPool();
-        public BaseScript BaseScript;
-        public PlayerMenu PlayerMenu;
+        Format Format;
+        ObjectPool Pool = new ObjectPool();
+        PlayerMenu PlayerMenu;
 
         List<ClothShopInfo> ClothShopList = new List<ClothShopInfo>();
 
         public ClothShop(ClientMain caller)
         {
             Pool = caller.Pool;
-            Client = caller;
             Format = caller.Format;
             PlayerMenu = caller.PlayerMenu;
 
