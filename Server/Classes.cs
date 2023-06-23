@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -7,9 +7,13 @@ namespace Core.Server
 {
     public class PlayerInstance
     {
-        public string Gender { get; set; }
+        public int Id { get; set; }
+        public string Skin { get; set; }
         public string Firstname { get; set; }
         public string Lastname { get; set; }
+        public string Rank { get; set; }
+        public string Job { get; set; }
+        public string Organisation { get; set; }
         public int Bitcoin { get; set; }
         public string Cars { get; set; }
         public string Birth { get; set; }
@@ -19,6 +23,7 @@ namespace Core.Server
         public string Bills { get; set; }
         public string Inventory { get; set; }
     }
+
     public class VehicleInfo
     {
         public string Model { get; set; }
@@ -78,5 +83,43 @@ namespace Core.Server
 
         [JsonProperty("palette")]
         public int Palette { get; set; }
+    }
+
+    public class SkinInfo
+    {
+        [JsonProperty("gender")]
+        public string Gender { get; set; }
+        [JsonProperty("dad")]
+        public int Dad { get; set; }
+
+        [JsonProperty("mom")]
+        public int Mom { get; set; }
+
+        [JsonProperty("dadMomPercent")]
+        public int DadMomPercent { get; set; }
+
+        [JsonProperty("eyecolor")]
+        public int EyeColor { get; set; }
+
+        [JsonProperty("eyebrow")]
+        public int Eyebrow { get; set; }
+
+        [JsonProperty("eyebrowOpacity")]
+        public int EyebrowOpacity { get; set; }
+
+        [JsonProperty("beard")]
+        public int Beard { get; set; }
+
+        [JsonProperty("beardOpacity")]
+        public int BeardOpacity { get; set; }
+
+        [JsonProperty("beardColor")]
+        public int BeardColor { get; set; }
+
+        [JsonProperty("hair")]
+        public int Hair { get; set; }
+
+        [JsonProperty("hairText")]
+        public int HairColor { get; set; }
     }
 }

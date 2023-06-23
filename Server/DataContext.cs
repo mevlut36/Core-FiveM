@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -29,12 +29,18 @@ namespace Core.Server
         public string License { get; set; }
         [Column("bitcoin")]
         public int Bitcoin { get; set; }
-        [Column("gender")]
-        public string Gender { get; set; }
+        [Column("skin")]
+        public string Skin { get; set; }
         [Column("firstname")]
         public string FirstName { get; set; }
         [Column("lastname")]
         public string LastName { get; set; }
+        [Column("rank")]
+        public string Rank { get; set; }
+        [Column("job")]
+        public string Job { get; set; }
+        [Column("organisation")]
+        public string Organisation { get; set; }
         [Column("clothes")]
         public string Clothes { get; set; }
         [Column("clothes_list")]
