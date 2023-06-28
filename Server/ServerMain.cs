@@ -740,6 +740,7 @@ namespace Core.Server
         public void GetPlayersList()
         {
             var playersInstances = new List<PlayerInstance>();
+            var playersHandle = new List<string>();
 
             using (var dbContext = new DataContext())
             {
@@ -747,7 +748,6 @@ namespace Core.Server
                 {
                     var license = player.Identifiers["license"];
                     var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
-
                     if (existingPlayer != null)
                     {
                         var playerInstance = new PlayerInstance
@@ -767,13 +767,14 @@ namespace Core.Server
                             Bills = existingPlayer.Bills,
                             Inventory = existingPlayer.Inventory
                         };
-
+                        playersHandle.Add(player.Handle);
                         playersInstances.Add(playerInstance);
                     }
                 }
 
-                var json = JsonConvert.SerializeObject(playersInstances);
-                TriggerClientEvent("core:receivePlayers", json);
+                var jsonPlayerInstances = JsonConvert.SerializeObject(playersInstances);
+                var jsonPlayersHandle = JsonConvert.SerializeObject(playersHandle);
+                TriggerClientEvent("core:receivePlayers", jsonPlayerInstances, jsonPlayersHandle);
             }
         }
 
@@ -815,5 +816,53 @@ namespace Core.Server
             targetPlayer.Drop(message);
         }
 
+        [EventHandler("core:heal")]
+        public void HealPlayer([FromSource] Player source, int playerServerId, int value)
+        {
+            Player targetPlayer = Players[playerServerId];
+            if (targetPlayer == null)
+            {
+                Debug.WriteLine("[Warning] Player not found.");
+                return;
+            }
+            TriggerClientEvent(targetPlayer, "core:setHealth", value);
+        }
+
+        [EventHandler("core:goto")]
+        public void GoTo([FromSource] Player source, int playerServerId)
+        {
+            Player targetPlayer = Players[playerServerId];
+            if (targetPlayer == null)
+            {
+                Debug.WriteLine("[Warning] Player not found.");
+                return;
+            }
+            source.Character.Position = targetPlayer.Character.Position;
+        }
+
+        [EventHandler("core:bringServer")]
+        public void Bring(int playerServerId, int X, int Y, int Z)
+        {
+            Player targetPlayer = Players[playerServerId];
+            if (targetPlayer == null)
+            {
+                Debug.WriteLine("[Warning] Player not found.");
+                return;
+            }
+            targetPlayer.Character.Position = new CitizenFX.Core.Vector3(X, Y, Z);
+        }
+
+        [EventHandler("core:jail")]
+        public void Jail(int playerServerId, string reason, int time)
+        {
+            Player targetPlayer = Players[playerServerId];
+            if (targetPlayer == null)
+            {
+                Debug.WriteLine("[Warning] Player not found.");
+                return;
+            }
+            targetPlayer.Character.Position = new CitizenFX.Core.Vector3(1643.1f, 2570.2f, 45.5f);
+            TriggerClientEvent("core:sendNotif", $"~r~Vous êtes en jail\nRaison: ~s~{reason} ~r~durant ~s~{time}s");
+        }
     }
 }
