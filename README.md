@@ -4,15 +4,17 @@ This project is a core module for FiveM that handles player spawning and creatio
 
 ## Features
 
-- Create character (Name, age)
+- Create character (Name, age, skin)
 - Save last position
-- Wear clothes (on register)
+- Wear clothes
 - Parking
 - Player menu (F5)
 - Concess Auto
 - AmmuNation
 - LTD Shop
 - VIP Shop (Can buy vehicle import)
+- Admin menu
+- Discord presence
 
 ## Contributing
 
