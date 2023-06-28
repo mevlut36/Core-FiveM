@@ -1,6 +1,8 @@
 using CitizenFX.Core;
 using CitizenFX.Core.Native;
+using CitizenFX.Core.NaturalMotion;
 using LemonUI;
+using Mono.CSharp;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -23,8 +25,10 @@ namespace Core.Client
         public ClothShop ClothShop;
         public VehicleSystem VehicleSystem;
         public ContainerSystem ContainerSystem;
+        public DiscordPresence DiscordPresence;
         public string Result = "";
-        public List<PlayerInstance> PlayersList = new List<PlayerInstance>();
+        public List<PlayerInstance> PlayersInstList = new List<PlayerInstance>();
+        public List<string> PlayersHandle = new List<string>();
         public List<VehicleInfo> vehicles = new List<VehicleInfo>();
 
         public int PlayerMoney = 0;
@@ -38,6 +42,7 @@ namespace Core.Client
             Debug.WriteLine("Hi from Core.Client!");
             EventHandlers["playerSpawned"] += new Action(OnPlayerConnecting);
             EventHandlers["onClientResourceStart"] += new Action<string>(OnClientStart);
+            EventHandlers["core:setHealth"] += new Action<int>(SetHealth);
             EventHandlers["baseevents:onPlayerDied"] += new Action<dynamic>(dyn =>
             {
                 SetEntityHealth(GetPlayerPed(-1), 100);
@@ -58,6 +63,7 @@ namespace Core.Client
             ClothShop = new ClothShop(this);
             VehicleSystem = new VehicleSystem(this);
             ContainerSystem = new ContainerSystem(this);
+            DiscordPresence = new DiscordPresence(this);
 
             EventHandlers["core:getPlayerData"] += new Action<string>(PlayerMenu.GetPlayerData);
             SetCanAttackFriendly(GetPlayerPed(-1), true, false);
@@ -72,6 +78,41 @@ namespace Core.Client
                 };
                 reportSystem.AddReport(newReport);
             }), false);
+            Tick += ScenarioSuppressionLoop;
+        }
+
+        private static readonly List<string> SCENARIO_TYPES = new List<string>
+        {
+            "WORLD_VEHICLE_MILITARY_PLANES_SMALL", // Zancudo Small Planes
+            "WORLD_VEHICLE_MILITARY_PLANES_BIG", // Zancudo Big Planes
+        };
+
+        private static readonly List<int> SCENARIO_GROUPS = new List<int>
+        {
+            2017590552, // LSIA planes
+            2141866469, // Sandy Shores planes
+            1409640232, // Grapeseed planes
+        };
+
+        private static readonly List<string> SUPPRESSED_MODELS = new List<string>
+        {
+            "SHAMAL", // They spawn on LSIA and try to take off
+            "LUXOR", // They spawn on LSIA and try to take off
+            "LUXOR2", // They spawn on LSIA and try to take off
+            "JET", // They spawn on LSIA and try to take off and land, remove this if you still want em in the skies
+            "LAZER", // They spawn on Zancudo and try to take off
+            "TITAN", // They spawn on Zancudo and try to take off
+            "BARRACKS", // Regularly driving around the Zancudo airport surface
+            "BARRACKS2", // Regularly driving around the Zancudo airport surface
+            "CRUSADER", // Regularly driving around the Zancudo airport surface
+            "RHINO", // Regularly driving around the Zancudo airport surface
+            "AIRTUG", // Regularly spawns on the LSIA airport surface
+            "RIPLEY", // Regularly spawns on the LSIA airport surface
+        };
+
+        public void SetHealth(int health)
+        {
+            SetEntityHealth(GetPlayerPed(-1), health);
         }
         public void OnClientStart(string text)
         {
@@ -96,6 +137,29 @@ namespace Core.Client
         public void ServerSendNotif(string text)
         {
             Format.SendNotif(text);
+        }
+
+        private async Task ScenarioSuppressionLoop()
+        {
+            while (true)
+            {
+                foreach (var sctyp in SCENARIO_TYPES)
+                {
+                    SetScenarioTypeEnabled(sctyp, false);
+                }
+
+                foreach (var scgrp in SCENARIO_GROUPS)
+                {
+                    SetScenarioGroupEnabled(scgrp.ToString(), false);
+                }
+
+                foreach (var model in SUPPRESSED_MODELS)
+                {
+                    SetVehicleModelIsSuppressed((uint)GetHashKey(model), false);
+                }
+
+                await Delay(10000);
+            }
         }
 
         [Tick]
@@ -139,6 +203,7 @@ namespace Core.Client
 
             if (IsDead)
             {
+                SetPlayerInvincible(GetPlayerPed(-1), true);
                 var totalMinutes = 10 - (int)Math.Floor((DateTime.UtcNow - DeathTime).TotalMinutes);
                 if (totalMinutes >= 6)
                 {
@@ -170,11 +235,13 @@ namespace Core.Client
                     IsDead = false;
                     StartScreenEffect("DeathFailFranklinIn", 0, false);
                     SetEntityHealth(GetPlayerPed(-1), 200);
+                    SetPlayerInvincible(GetPlayerPed(-1), false);
                     SetEntityCoords(GetPlayerPed(-1), -457.6f, -283.3f, 36.3f, true, false, true, false);
                 }
                 if (GetEntityHealth(GetPlayerPed(-1)) >= 175)
                 {
                     IsDead = false;
+                    SetPlayerInvincible(GetPlayerPed(-1), false);
                     DeathAnimation(1);
                     StartScreenEffect("DeadlineNeon", 0, false);
                 }
@@ -215,12 +282,9 @@ namespace Core.Client
             API.DrawRect(0.07f, 0.75f, 0.16f, 0.02f, 0, 0, 0, 150);
             API.DrawRect(0.07f, 0.75f, healthBarWidth, 0.02f, 0, 255, 0, 150);
         }
-        public void SetJail(int playerId, string reason, int time)
+        public void SetJail(string playerId, string reason, int time)
         {
-            SetEntityCoords(playerId, 1643.1f, 2570.2f, 45.5f, true, false, false, false);
-            Format.SendNotif("~r~Vous êtes en jail");
-            Format.SendNotif($"~r~Raison: {reason}");
-            Format.SendTextUI($"{time}");
+            TriggerServerEvent("core:jail", playerId, reason, time);
         }
     }
 }

@@ -201,7 +201,7 @@ namespace Core.Client
                 var vehicleNames = System.Enum.GetNames(typeof(VehicleHash));
                 var vehicleClasses = new Dictionary<int, List<string>>
                 {
-                    { 25, new List<string>(){ "twingo", "vwinstance" } }
+                    { 25, new List<string>(){ "twingo" } }
                 };
 
                 foreach (var vehicleName in vehicleNames)

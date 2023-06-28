@@ -19,7 +19,6 @@ namespace Core.Client
         ClientMain Client;
         Format Format;
         ObjectPool Pool = new ObjectPool();
-        VehicleSystem VehicleSystem;
         public Dictionary<Vector3, List<Vector3>> parkingDict = new Dictionary<Vector3, List<Vector3>>();
         public List<Vector3> parkingEnterList = new List<Vector3>();
 
@@ -77,7 +76,6 @@ namespace Core.Client
             Pool = caller.Pool;
             Client = caller;
             Format = caller.Format;
-            VehicleSystem = caller.VehicleSystem;
             Client.AddEvent("core:sendVehicleInfos", new Action<string, int>(GetVehicles));
 
             parkingDict.Add(redParkingKey, redParkingValues);
@@ -134,8 +132,54 @@ namespace Core.Client
                     EngineLevel = vehicle.Mods[VehicleModType.Engine].Index,
                     BrakeLevel = vehicle.Mods[VehicleModType.Brakes].Index,
                     ColorPrimary = (int)vehicle.Mods.PrimaryColor,
-                    ColorSecondary = (int)vehicle.Mods.SecondaryColor
+                    ColorSecondary = (int)vehicle.Mods.SecondaryColor,
+                    Spoiler = vehicle.Mods[VehicleModType.Spoilers].Index,
+                    Bumber_F = vehicle.Mods[VehicleModType.FrontBumper].Index,
+                    Bumber_R = vehicle.Mods[VehicleModType.RearBumper].Index,
+                    Skirt = vehicle.Mods[VehicleModType.SideSkirt].Index,
+                    Exhaust = vehicle.Mods[VehicleModType.Exhaust].Index,
+                    Chassis = vehicle.Mods[VehicleModType.Frame].Index,
+                    Grill = vehicle.Mods[VehicleModType.Grille].Index,
+                    Bonnet = vehicle.Mods[VehicleModType.Hood].Index,
+                    Wing_L = vehicle.Mods[VehicleModType.Fender].Index,
+                    Wing_R = vehicle.Mods[VehicleModType.RightFender].Index,
+                    Roof = vehicle.Mods[VehicleModType.Roof].Index,
+                    Engine = vehicle.Mods[VehicleModType.Engine].Index,
+                    Brakes = vehicle.Mods[VehicleModType.Brakes].Index,
+                    Gearbox = vehicle.Mods[VehicleModType.Transmission].Index,
+                    Horn = vehicle.Mods[VehicleModType.Horns].Index,
+                    Suspension = vehicle.Mods[VehicleModType.Suspension].Index,
+                    Armour = vehicle.Mods[VehicleModType.Armor].Index,
+                    Subwoofer = vehicle.Mods[VehicleModType.Speakers].Index,
+                    Hydraulics = vehicle.Mods[VehicleModType.Hydraulics].Index,
+                    Wheels = vehicle.Mods[VehicleModType.FrontWheel].Index,
+                    WheelsRearOrHydraulics = vehicle.Mods[VehicleModType.RearWheel].Index,
+                    PLTHolder = vehicle.Mods[VehicleModType.PlateHolder].Index,
+                    PLTVanity = vehicle.Mods[VehicleModType.VanityPlates].Index,
+                    Interior1 = vehicle.Mods[VehicleModType.TrimDesign].Index,
+                    Interior2 = vehicle.Mods[VehicleModType.Ornaments].Index,
+                    Interior3 = vehicle.Mods[VehicleModType.Dashboard].Index,
+                    Interior4 = vehicle.Mods[VehicleModType.DialDesign].Index,
+                    Interior5 = vehicle.Mods[VehicleModType.DoorSpeakers].Index,
+                    Seats = vehicle.Mods[VehicleModType.Seats].Index,
+                    Steering = vehicle.Mods[VehicleModType.SteeringWheels].Index,
+                    Knob = vehicle.Mods[VehicleModType.ColumnShifterLevers].Index,
+                    Plaque = vehicle.Mods[VehicleModType.Plaques].Index,
+                    Ice = vehicle.Mods[VehicleModType.Speakers].Index,
+                    Trunk = vehicle.Mods[VehicleModType.Trunk].Index,
+                    Hydro = vehicle.Mods[VehicleModType.Hydraulics].Index,
+                    EngineBay1 = vehicle.Mods[VehicleModType.EngineBlock].Index,
+                    EngineBay2 = vehicle.Mods[VehicleModType.Struts].Index,
+                    EngineBay3 = vehicle.Mods[VehicleModType.ArchCover].Index,
+                    Chassis2 = vehicle.Mods[VehicleModType.Aerials].Index,
+                    Chassis3 = vehicle.Mods[VehicleModType.Trim].Index,
+                    Chassis4 = vehicle.Mods[VehicleModType.Trim].Index,
+                    Chassis5 = vehicle.Mods[VehicleModType.Tank].Index,
+                    Door_L = vehicle.Mods[VehicleModType.Windows].Index,
+                    Door_R = vehicle.Mods[VehicleModType.Windows].Index,
+                    LiveryMod = vehicle.Mods[VehicleModType.Livery].Index
                 };
+
 
                 List<VehicleInfo> cars = new List<VehicleInfo>();
                 cars.Add(info);

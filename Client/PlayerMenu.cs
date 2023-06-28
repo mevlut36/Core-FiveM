@@ -28,7 +28,7 @@ namespace Core.Client
             Format = caller.Format;
             Parking = caller.Parking;
             BaseScript.TriggerServerEvent("core:getPlayersList");
-            Client.AddEvent("core:receivePlayers", new Action<string>(OnReceivePlayers));
+            Client.AddEvent("core:receivePlayers", new Action<string, string>(OnReceivePlayers));
         }
 
         public PlayerInstance PlayerInst = new PlayerInstance
@@ -72,12 +72,15 @@ namespace Core.Client
                         UseMouse = false
                     };
                     Pool.Add(playerList);
-                    foreach (var player in Client.PlayersList)
+                    for (int i = 0; i < Client.PlayersInstList.Count; i++)
                     {
-                        var targetPlayer = GetPlayerPed(GetPlayerFromServerId(player.Id));
-                        
-                        var playerMenu = new NativeMenu($"", $"{player.Id} | {PlayerInst.Firstname} {PlayerInst.Lastname}", 
-                            $"ID: {player.Id}\nDB ID: {PlayerInst.Id}\nJob: {PlayerInst.Job}\nOrga: {PlayerInst.Organisation}\nRank: {PlayerInst.Rank}\nBitcoin: {PlayerInst.Bitcoin}\nMoney: {PlayerInst.Money}")
+                        var playerInst = Client.PlayersInstList[i];
+                        var handle = Client.PlayersHandle[i];
+
+                        var targetPlayer = GetPlayerPed(GetPlayerFromServerId(int.Parse(handle)));
+
+                        var playerMenu = new NativeMenu($"", $"{handle} | {playerInst.Firstname} {playerInst.Lastname}",
+                        $"ID: {handle}\nDB ID: {playerInst.Id}\nJob: {playerInst.Job}\nOrga: {playerInst.Organisation}\nRank: {playerInst.Rank}\nBitcoin: {playerInst.Bitcoin}\nMoney: {playerInst.Money}")
                         {
                             TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                             UseMouse = false
@@ -85,39 +88,38 @@ namespace Core.Client
                         var reviveP = new NativeItem("Revive", "Réanimer le joueur");
                         reviveP.Activated += (sender, e) =>
                         {
-                            SetEntityHealth(targetPlayer, 175);
+                            BaseScript.TriggerServerEvent("core:heal", handle, 200);
                         };
                         var jail = new NativeItem("Jail", "Jail une personne pendant un certain temps");
                         jail.Activated += async (sender, e) =>
                         {
                             var input = await Format.GetUserInput("Durée", "", 12);
                             var parsedInput = Int32.Parse(input);
-                            Client.SetJail(targetPlayer, "Troll", parsedInput);
+                            Client.SetJail(handle, "Troll", parsedInput);
                         };
                         var spec = new NativeItem("Téléporter à lui", "Guette le joueur");
                         spec.Activated += (sender, e) =>
                         {
                             var targetPCoords = GetEntityCoords(targetPlayer, true);
-                            SetEntityCoords(GetPlayerPed(-1), targetPCoords.X, targetPCoords.Y, targetPCoords.Z, false, false, false, false);
+                            BaseScript.TriggerServerEvent("core:goto", handle);
                         };
                         var tpHim = new NativeItem("Téléporter sur soi", "TP sur soi");
                         tpHim.Activated += (sender, e) =>
                         {
-                            var targetPCoords = GetEntityCoords(targetPlayer, true);
                             var pCoords = GetEntityCoords(GetPlayerPed(-1), true);
-                            SetEntityCoords(targetPlayer, pCoords.X, pCoords.Y, pCoords.Z, false, false, false, false);
+                            BaseScript.TriggerServerEvent("core:bringServer", handle, pCoords.X, pCoords.Y, pCoords.Z);
                         };
                         var warn = new NativeItem("Warn / Avertir", "Avertir le joueur");
                         warn.Activated += async (sender, e) =>
                         {
                             var input = await Format.GetUserInput("Message", "", 12);
-                            BaseScript.TriggerServerEvent("core:warn", player.Id, input);
+                            BaseScript.TriggerServerEvent("core:warn", handle, input);
                         };
                         var kick = new NativeItem("Kick / Expulser", "Expulser le joueur");
                         kick.Activated += async (sender, e) =>
                         {
                             var input = await Format.GetUserInput("Message", "", 12);
-                            BaseScript.TriggerServerEvent("core:kick", player.Id, input);
+                            BaseScript.TriggerServerEvent("core:kick", handle, input);
                         };
                         var ban = new NativeItem("Bannir", "Bannir le joueur");
                         ban.Activated += async (sender, e) =>
@@ -125,7 +127,7 @@ namespace Core.Client
                             var inputMessage = await Format.GetUserInput("Message", "", 12);
                             var inputTime = await Format.GetUserInput("Temps (en min.)", "", 12);
                             var banTime = int.Parse(inputTime);
-                            BaseScript.TriggerServerEvent("core:TempBanPlayer", player.Id, banTime, inputMessage);
+                            BaseScript.TriggerServerEvent("core:TempBanPlayer", handle, banTime, inputMessage);
                         };
 
                         playerMenu.Add(reviveP);
@@ -161,11 +163,13 @@ namespace Core.Client
                     var showNameState = false;
                     showName.Activated += (sender, e) =>
                     {
-                        foreach (var player in Client.PlayersList)
+                        for (int i = 0; i < Client.PlayersInstList.Count; i++)
                         {
+                            var playerInst = Client.PlayersInstList[i];
+                            var handle = Client.PlayersHandle[i];
                             showNameState = !showNameState;
-                            int ped = GetPlayerPed(PlayerId());
-                            int gamerTagID = CreateMpGamerTag(ped, $"[{player.Id}] {PlayerInst.Firstname} {PlayerInst.Lastname}", true, false, "test", 1);
+                            var targetPlayer = GetPlayerPed(GetPlayerFromServerId(int.Parse(handle)));
+                            int gamerTagID = CreateMpGamerTag(targetPlayer, $"[{handle}] {playerInst.Firstname} {playerInst.Lastname}", true, false, "test", 1);
                             if (showNameState)
                             {
                                 SetMpGamerTagVisibility(gamerTagID, 0, true);
@@ -553,15 +557,22 @@ namespace Core.Client
 
         }
 
-        private void OnReceivePlayers(string json)
+        private void OnReceivePlayers(string jsonInst, string jsonHandles)
         {
-            var players = JsonConvert.DeserializeObject<List<PlayerInstance>>(json);
-            foreach (var player in players)
+            var playersInst = JsonConvert.DeserializeObject<List<PlayerInstance>>(jsonInst);
+            var playersHandle = JsonConvert.DeserializeObject<List<string>>(jsonHandles);
+            Client.PlayersInstList.Clear();
+            Client.PlayersHandle.Clear();
+            foreach (var playerInst in playersInst)
             {
-                Debug.WriteLine($"{player.Firstname}");
-                Client.PlayersList.Add(player);
+                Client.PlayersInstList.Add(playerInst);
+            }
+            foreach (var player in playersHandle)
+            {
+                Client.PlayersHandle.Add(player);
             }
         }
+
 
         public void ItemAction(string action, string item)
         {

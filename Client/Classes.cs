@@ -74,7 +74,58 @@ namespace Core.Client
         public int BrakeLevel { get; set; }
         public int ColorPrimary { get; set; }
         public int ColorSecondary { get; set; }
+        public int Spoiler { get; set; }
+        public int Bumber_F { get; set; }
+        public int Bumber_R { get; set; }
+        public int Skirt { get; set; }
+        public int Exhaust { get; set; }
+        public int Chassis { get; set; }
+        public int Grill { get; set; }
+        public int Bonnet { get; set; }
+        public int Wing_L { get; set; }
+        public int Wing_R { get; set; }
+        public int Roof { get; set; }
+        public int Engine { get; set; }
+        public int Brakes { get; set; }
+        public int Gearbox { get; set; }
+        public int Horn { get; set; }
+        public int Suspension { get; set; }
+        public int Armour { get; set; }
+        public int Nitrous { get; set; }
+        public int Turbo { get; set; }
+        public int Subwoofer { get; set; }
+        public int TyreSmoke { get; set; }
+        public int Hydraulics { get; set; }
+        public int XenonLights { get; set; }
+        public int Wheels { get; set; }
+        public int WheelsRearOrHydraulics { get; set; }
+        public int PLTHolder { get; set; }
+        public int PLTVanity { get; set; }
+        public int Interior1 { get; set; }
+        public int Interior2 { get; set; }
+        public int Interior3 { get; set; }
+        public int Interior4 { get; set; }
+        public int Interior5 { get; set; }
+        public int Seats { get; set; }
+        public int Steering { get; set; }
+        public int Knob { get; set; }
+        public int Plaque { get; set; }
+        public int Ice { get; set; }
+        public int Trunk { get; set; }
+        public int Hydro { get; set; }
+        public int EngineBay1 { get; set; }
+        public int EngineBay2 { get; set; }
+        public int EngineBay3 { get; set; }
+        public int Chassis2 { get; set; }
+        public int Chassis3 { get; set; }
+        public int Chassis4 { get; set; }
+        public int Chassis5 { get; set; }
+        public int Door_L { get; set; }
+        public int Door_R { get; set; }
+        public int LiveryMod { get; set; }
+        public int LightBar { get; set; }
     }
+
 
     public class BootInfo
     {
