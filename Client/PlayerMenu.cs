@@ -59,6 +59,7 @@ namespace Core.Client
                 };
                 if (PlayerInst.Rank == "staff")
                 {
+                    BaseScript.TriggerServerEvent("core:getPlayersList");
                     var adminMenu = new NativeMenu("Administration", "~o~Administration")
                     {
                         TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
@@ -79,8 +80,9 @@ namespace Core.Client
 
                         var targetPlayer = GetPlayerPed(GetPlayerFromServerId(int.Parse(handle)));
 
+                        var job = JsonConvert.DeserializeObject<JobInfo>(playerInst.Job);
                         var playerMenu = new NativeMenu($"", $"{handle} | {playerInst.Firstname} {playerInst.Lastname}",
-                        $"ID: {handle}\nDB ID: {playerInst.Id}\nJob: {playerInst.Job}\nOrga: {playerInst.Organisation}\nRank: {playerInst.Rank}\nBitcoin: {playerInst.Bitcoin}\nMoney: {playerInst.Money}")
+                        $"ID: {handle}\nDB ID: {playerInst.Id}\nJob: {job.JobID} | {job.JobRank}\nOrga: {playerInst.Organisation}\nRank: {playerInst.Rank}\nBitcoin: {playerInst.Bitcoin}\nMoney: {playerInst.Money}")
                         {
                             TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                             UseMouse = false
@@ -196,6 +198,9 @@ namespace Core.Client
                         var vector2Pos = new Vector2(PlayerPos.X, PlayerPos.Y);
                         var closestPed = World.GetClosest(vector2Pos, World.GetAllPeds());
                         SetEntityHealth(closestPed.Handle, 200);
+                        Client.IsDead = false;
+                        SetEntityHealth(GetPlayerPed(-1), 200);
+                        ClearPedTasksImmediately(GetPlayerPed(-1));
                     };
 
                     var car = new NativeItem("Spawn car", "Faire apparaître un véhicule");
@@ -351,9 +356,9 @@ namespace Core.Client
                         {
                             var invItem = new NativeListItem<string>($"{item.Item} ({item.Quantity})", "", "Utiliser", "Donner");
                             inventoryMenu.Add(invItem);
-                            invItem.Activated += (sender, e) =>
+                            invItem.Activated += async (sender, e) =>
                             {
-                                ItemAction(invItem.SelectedItem, item.Item);
+                                await ItemActionAsync(invItem.SelectedItem, item.Item);
                             };
                         }
                     }
@@ -378,6 +383,15 @@ namespace Core.Client
                                 if (clotheItem.SelectedItem == "Porter")
                                 {
                                     SetPedComponentVariation(GetPlayerPed(-1), clothes.Component, clothes.Drawable, clothes.Texture, clothes.Palette);
+                                    var clothesJson = JsonConvert.SerializeObject(new ClothesInfo
+                                    {
+                                        Component = clothes.Component,
+                                        Drawable = clothes.Drawable,
+                                        Texture = clothes.Texture,
+                                        Palette = clothes.Palette
+                                    });
+
+                                    BaseScript.TriggerServerEvent("core:updateClothe", clothesJson);
                                 }
                                 else
                                 {
@@ -574,7 +588,7 @@ namespace Core.Client
         }
 
 
-        public void ItemAction(string action, string item)
+        public async Task ItemActionAsync(string action, string item)
         {
             if (action == "Utiliser")
             {
@@ -584,17 +598,42 @@ namespace Core.Client
                         Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 3000);
                         SetEntityHealth(GetPlayerPed(-1), GetEntityHealth(GetPlayerPed(-1))+10);
                         break;
+                    case "Sandwich":
+                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 3000);
+                        SetEntityHealth(GetPlayerPed(-1), GetEntityHealth(GetPlayerPed(-1)) + 30);
+                        break;
                     case "Eau":
+                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 3000);
+                        break;
+                    case "Coca Cola":
                         Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 3000);
                         break;
                     case "Outil de crochetage":
                         Format.PlayAnimation("anim@heists@humane_labs@emp@hack_door", "hack_intro", 10000);
                         break;
+                    case "Menotte":
+                        BaseScript.TriggerServerEvent("");
+                        break;
                     case "Dollars":
-                        BaseScript.TriggerServerEvent("appart:callPolice"); // TEST
                         break;
                     case "Phone":
                         break;
+                }
+            } else if (action == "Donner")
+            {
+                var textInput = await Format.GetUserInput("Quantité", "1", 4);
+                var parsedInput = int.Parse(textInput);
+                var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
+                var closestPed = World.GetClosest(playerCoords, World.GetAllPeds());
+                if (GetDistanceBetweenCoords(playerCoords.X, playerCoords.Y, playerCoords.Z, closestPed.Position.X, closestPed.Position.Y, closestPed.Position.Z, true) < 10)
+                {
+                    if (parsedInput != 0)
+                    {
+                        BaseScript.TriggerServerEvent("core:removeItem", item, parsedInput);
+                        BaseScript.TriggerServerEvent("core:requestPlayerData");
+                        BaseScript.TriggerServerEvent("core:addItem", item, parsedInput, closestPed.Handle);
+                        BaseScript.TriggerServerEvent("core:requestPlayerData", closestPed.Handle);
+                    }
                 }
             }
         }

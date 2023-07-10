@@ -20,6 +20,14 @@ namespace Core.Client
         public string ItemType { get; set; }
     }
 
+    class JobInfo
+    {
+        [JsonProperty("id")]
+        public string JobID { get; set; }
+        [JsonProperty("rank")]
+        public int JobRank { get; set; }
+    }
+
     public class Bills
     {
         [JsonProperty("company")]

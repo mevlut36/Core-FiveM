@@ -328,7 +328,7 @@ namespace Core.Client
         public async void GetGender(string json)
         {
             var gender = JsonConvert.DeserializeObject<SkinInfo>(json);
-
+            ShutdownLoadingScreen();
             var pedHash = gender.Gender == "Femme" ? PedHash.FreemodeFemale01 : PedHash.FreemodeMale01;
             var model = new Model(pedHash);
             RequestModel(model);

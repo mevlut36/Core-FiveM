@@ -4,8 +4,11 @@ namespace Core.Client
 {
     public enum VehicleImport
     {
-        [Display("a1gt63", "Mercedes AMG GT 63", 3000)]
-        MercedesAMGGT63,
+        [Display("ae86", "Toyota AE86 Trueno [~d~Initial ~r~D~s~ Edition]", 2000)]
+        TOYOTAAE86TRUENO,
+
+        [Display("rx7fd", "Mazda RX-7 [~d~Initial ~r~D~s~ Edition]", 2000)]
+        MAZDARX7,
 
         [Display("cls63amg", "Mercedes CLS 350 AMG", 2500)]
         CLS63AMG,
@@ -15,6 +18,8 @@ namespace Core.Client
 
         [Display("rs7", "Audi RS7", 2000)]
         AudiRS7,
+        [Display("r820", "Audi R8 2020", 3000)]
+        AudiR82020,
 
         [Display("q82023", "Audi Q8 2023", 2500)]
         AudiQ82023,

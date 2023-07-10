@@ -22,6 +22,12 @@ namespace Core.Client
         public Dictionary<Vector3, List<Vector3>> parkingDict = new Dictionary<Vector3, List<Vector3>>();
         public List<Vector3> parkingEnterList = new List<Vector3>();
 
+        public Vector3 desertParkingKey = new Vector3(1734.8f, 3318, 41.2f);
+        List<Vector3> desertParkingValues = new List<Vector3>()
+        {
+            new Vector3(1726, 3315.1f, 41.2f)
+        };
+        
         public Vector3 redParkingKey = new Vector3(-285.5f, -887.2f, 31);
         List<Vector3> redParkingValues = new List<Vector3>()
         {
@@ -78,6 +84,7 @@ namespace Core.Client
             Format = caller.Format;
             Client.AddEvent("core:sendVehicleInfos", new Action<string, int>(GetVehicles));
 
+            parkingDict.Add(desertParkingKey, desertParkingValues);
             parkingDict.Add(redParkingKey, redParkingValues);
             parkingDict.Add(centralParkingKey, centralParkingValues);
             parkingDict.Add(paletoParkingKey, paletoParkingValues);

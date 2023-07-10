@@ -69,7 +69,7 @@ namespace Core.Client
             RegisterCommand("report", new Action<int, List<object>, string>((source, args, raw) =>
             {
                 string arguments = string.Join(" ", args);
-                Format.SendNotif("~g~Votre report a bien Ã©tÃ© envoyer, veuillez patienter");
+                Format.SendNotif("~g~Votre report a bien été envoyer, veuillez patienter");
                 var newReport = new ReportClass
                 {
                     Player = PlayerMenu.PlayerInst,
@@ -185,13 +185,13 @@ namespace Core.Client
                 var remainingTime = TimeSpan.FromMinutes(10) - (DateTime.UtcNow - DeathTime);
                 var totalMinutes = Math.Round(remainingTime.TotalMinutes);
 
-                Format.SendTextUI($"~r~Vous Ãªtes mort\nRÃ©appartion possible dans {totalMinutes}min");
+                Format.SendTextUI($"~r~Vous êtes mort\nRéappartion possible dans {totalMinutes}min");
 
                 if (GetEntityHealth(GetPlayerPed(1)) < 200)
                 {
                     if (DateTime.UtcNow - DeathTime >= TimeSpan.FromMinutes(5))
                     {
-                        Format.SendTextUI($"\n\n~r~! RÃ©appartion avancÃ©e, appuyer sur ~g~E~r~, coÃ»t: ~g~$10000 ~r~!");
+                        Format.SendTextUI($"\n\n~r~! Réappartion avancée, appuyer sur ~g~E~r~, coût: ~g~$10000 ~r~!");
 
                         if (PlayerMenu.PlayerInst.Money >= 10000)
                         {
