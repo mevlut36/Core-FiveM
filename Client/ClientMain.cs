@@ -34,7 +34,7 @@ namespace Core.Client
         public int PlayerMoney = 0;
         public Vehicle MyVehicle;
 
-        private bool IsDead = false;
+        public bool IsDead = false;
         private DateTime DeathTime;
         public ReportSystem reportSystem = new ReportSystem();
         public ClientMain()
@@ -43,13 +43,13 @@ namespace Core.Client
             EventHandlers["playerSpawned"] += new Action(OnPlayerConnecting);
             EventHandlers["onClientResourceStart"] += new Action<string>(OnClientStart);
             EventHandlers["core:setHealth"] += new Action<int>(SetHealth);
-            EventHandlers["baseevents:onPlayerDied"] += new Action<dynamic>(dyn =>
+            EventHandlers["baseevents:onPlayerDied"] += new Action<dynamic>(async dyn =>
             {
-                SetEntityHealth(GetPlayerPed(-1), 100);
-                DeathAnimation(600000);
-                StartScreenEffect("DeathFailMPIn", 0, false);
-                CreateCinematicShot(-1096069633, 2000, 0, GetPlayerPed(-1));
-                SetPlayerHealthRechargeMultiplier(GetPlayerPed(-1), 0.5f);
+                var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
+                SetEntityInvincible(GetPlayerPed(-1), true);
+                NetworkResurrectLocalPlayer(playerCoords.X, playerCoords.Y, playerCoords.Z, 90, true, false);
+                ClearPedTasksImmediately(GetPlayerPed(-1));
+                await OnPlayerDeath();
             });
 
             Format = new Format(this);
@@ -66,11 +66,10 @@ namespace Core.Client
             DiscordPresence = new DiscordPresence(this);
 
             EventHandlers["core:getPlayerData"] += new Action<string>(PlayerMenu.GetPlayerData);
-            SetCanAttackFriendly(GetPlayerPed(-1), true, false);
             RegisterCommand("report", new Action<int, List<object>, string>((source, args, raw) =>
             {
                 string arguments = string.Join(" ", args);
-                Format.SendNotif("~g~Votre report a bien été envoyer, veuillez patienter");
+                Format.SendNotif("~g~Votre report a bien Ã©tÃ© envoyer, veuillez patienter");
                 var newReport = new ReportClass
                 {
                     Player = PlayerMenu.PlayerInst,
@@ -113,14 +112,19 @@ namespace Core.Client
         public void SetHealth(int health)
         {
             SetEntityHealth(GetPlayerPed(-1), health);
+            IsDead = false;
+            SetEntityHealth(GetPlayerPed(-1), 200);
+            ClearPedTasksImmediately(GetPlayerPed(-1));
         }
         public void OnClientStart(string text)
         {
-            UpdatePlayer();
+            // UpdatePlayer();
         }
         public void OnPlayerConnecting()
         {
             TriggerServerEvent("core:isPlayerRegistered");
+            NetworkSetFriendlyFireOption(true);
+            SetCanAttackFriendly(PlayerPedId(), true, true);
         }
         public async void DeathAnimation(int time)
         {
@@ -131,7 +135,6 @@ namespace Core.Client
             Game.PlayerPed.Task.PlayAnimation("dead", "dead_a", -1, time, flags);
             ClearPedBloodDamage(GetPlayerPed(-1));
         }
-        
 
         [EventHandler("core:sendNotif")]
         public void ServerSendNotif(string text)
@@ -162,12 +165,67 @@ namespace Core.Client
             }
         }
 
+        public async Task OnPlayerDeath()
+        {
+            if (IsDead) return;
+            IsDead = true;
+            DeathTime = DateTime.UtcNow;
+
+            StartScreenEffect("DeathFailMPIn", 0, false);
+            CreateCinematicShot(-1096069633, 2000, 0, GetPlayerPed(-1));
+            DeathAnimation(600000);
+
+            while (IsDead && DateTime.UtcNow - DeathTime < TimeSpan.FromMinutes(10))
+            {
+                if (!IsEntityPlayingAnim(GetPlayerPed(-1), "dead", "dead_a", 3))
+                {
+                    DeathAnimation(600000);
+                }
+                await Delay(1);
+                var remainingTime = TimeSpan.FromMinutes(10) - (DateTime.UtcNow - DeathTime);
+                var totalMinutes = Math.Round(remainingTime.TotalMinutes);
+
+                Format.SendTextUI($"~r~Vous Ãªtes mort\nRÃ©appartion possible dans {totalMinutes}min");
+
+                if (GetEntityHealth(GetPlayerPed(1)) < 200)
+                {
+                    if (DateTime.UtcNow - DeathTime >= TimeSpan.FromMinutes(5))
+                    {
+                        Format.SendTextUI($"\n\n~r~! RÃ©appartion avancÃ©e, appuyer sur ~g~E~r~, coÃ»t: ~g~$10000 ~r~!");
+
+                        if (PlayerMenu.PlayerInst.Money >= 10000)
+                        {
+                            if (IsControlPressed(0, 38))
+                            {
+                                PlayerMenu.PlayerInst.Money -= 10000;
+                                SetEntityHealth(GetPlayerPed(-1), 200);
+                                SetEntityCoords(GetPlayerPed(-1), -457.6f, -283.3f, 36.3f, true, false, true, false);
+                                IsDead = false;
+                            }
+                        }
+                        else
+                        {
+                            Format.SendNotif("Vous n'avez pas assez d'argent");
+                        }
+                    }
+                } else
+                {
+                    IsDead = false;
+                }
+            }
+
+            if (IsDead)
+            {
+                SetEntityHealth(GetPlayerPed(-1), 200);
+                SetEntityCoords(GetPlayerPed(-1), -457.6f, -283.3f, 36.3f, true, false, true, false);
+                IsDead = false;
+            }
+        }
+
         [Tick]
         public async Task OnTick()
         {
             Pool.Process();
-            var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
-            Format.SendTextUI($"{playerCoords}");
             for (int i = 0; i <= 15; i++)
             {
                 EnableDispatchService(i, false);
@@ -195,57 +253,6 @@ namespace Core.Client
                 DrawPlayerHealthBar();
             }
 
-            if (IsPedFatallyInjured(GetPlayerPed(-1)))
-            {
-                IsDead = true;
-                DeathTime = DateTime.UtcNow;
-            }
-
-            if (IsDead)
-            {
-                SetPlayerInvincible(GetPlayerPed(-1), true);
-                var totalMinutes = 10 - (int)Math.Floor((DateTime.UtcNow - DeathTime).TotalMinutes);
-                if (totalMinutes >= 6)
-                {
-                    Format.SendTextUI($"~r~Vous êtes mort\nRéappartion possible dans {totalMinutes}min");
-                }
-                if (totalMinutes <= 5)
-                {
-                    Format.SendTextUI($"~r~Vous êtes mort\nRéappartion possible dans {totalMinutes}min");
-                    Format.SendTextUI($"\n\n~r~! Réappartion avancée, appuyer sur ~g~E~r~, coût: ~g~$10000 ~r~!");
-                    if (IsControlPressed(0, 38))
-                    {
-                        if (PlayerMenu.PlayerInst.Money >= 10000)
-                        {
-                            Format.SendNotif("~g~Vous êtes apparu à l'Hopital");
-                            IsDead = false;
-                            SetEntityHealth(GetPlayerPed(-1), 200);
-                            PlayerMenu.PlayerInst.Money -= 10000;
-                            UpdatePlayer();
-                            DeathAnimation(1);
-                            StartScreenEffect("DeathFailFranklinIn", 0, false);
-                            SetEntityCoords(GetPlayerPed(-1), -457.6f, -283.3f, 36.3f, true, false, true, false);
-                        } else
-                        {
-                            Format.SendNotif("~r~Vous n'avez pas assez d'argent...");
-                        }
-                    }
-                } else if (totalMinutes <= 0)
-                {
-                    IsDead = false;
-                    StartScreenEffect("DeathFailFranklinIn", 0, false);
-                    SetEntityHealth(GetPlayerPed(-1), 200);
-                    SetPlayerInvincible(GetPlayerPed(-1), false);
-                    SetEntityCoords(GetPlayerPed(-1), -457.6f, -283.3f, 36.3f, true, false, true, false);
-                }
-                if (GetEntityHealth(GetPlayerPed(-1)) >= 175)
-                {
-                    IsDead = false;
-                    SetPlayerInvincible(GetPlayerPed(-1), false);
-                    DeathAnimation(1);
-                    StartScreenEffect("DeadlineNeon", 0, false);
-                }
-            }
         }
         public Task PopulationManaged()
         {
