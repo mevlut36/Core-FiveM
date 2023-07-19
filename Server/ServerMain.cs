@@ -4,6 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using static CitizenFX.Core.Native.API;
 using Newtonsoft.Json;
+using System.ComponentModel;
 
 namespace Core.Server
 {
@@ -49,21 +50,13 @@ namespace Core.Server
             Debug.WriteLine("Hi from Core.Server!");
             EventHandlers["playerDropped"] += new Action<Player>(IsPlayerDisconnecting);
             EventHandlers["core:kick"] += new Action<Player, int, string>(Kick);
-            EventHandlers["onServerResourceStart"] += new Action(OnResourceStart);
+            EventHandlers["playerJoining"] += new Action(OnResourceStart);
         }
 
-        public async void OnResourceStart()
+        public void OnResourceStart()
         {
-            var lissPedId = new List<int>();
-            foreach(var ped in PNJ)
-            {
-                int PedId = CreatePed(26, (uint)GetHashKey("a_m_m_polynesian_01"), ped.X, ped.Y, ped.Z, 0, true, true);
-                while (DoesEntityExist(PedId) == false) { await Delay(50); }
-                await Delay(10);
-                int PedNetId = NetworkGetNetworkIdFromEntity(PedId);
-                lissPedId.Add(PedNetId);
-            }
-            TriggerClientEvent("core:pedsIdList", JsonConvert.SerializeObject(lissPedId));
+            Debug.WriteLine("OnResourceStart called");
+            TriggerClientEvent("core:spawnPeds", JsonConvert.SerializeObject(PNJ));
         }
 
         [EventHandler("core:isPlayerRegistered")]
@@ -166,6 +159,50 @@ namespace Core.Server
                 if (existingPlayer != null)
                 {
                     TriggerClientEvent(player, "core:getClothes", existingPlayer.Clothes, existingPlayer.Skin);
+                }
+            }
+        }
+
+        [EventHandler("core:robbery")]
+        public async void Robbery([FromSource] Player player)
+        {
+            using (var dbContext = new DataContext())
+            {
+                var license = player.Identifiers["license"];
+                var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
+                if (existingPlayer != null)
+                {
+                    var inventory = JsonConvert.DeserializeObject<List<ItemQuantity>>(existingPlayer.Inventory);
+                    var itemFilter = inventory.FirstOrDefault(item => item.Item == "Dollars");
+                    Random random = new Random();
+                    int randomNumber = random.Next(3500, 5001);
+
+                    var dollars = new ItemQuantity
+                    {
+                        ItemType = "item",
+                        Item = "Dollars",
+                        Quantity = randomNumber,
+                    };
+
+                    if (itemFilter != null)
+                    {
+                        itemFilter.Quantity += randomNumber;
+                    }
+                    else
+                    {
+                        inventory.Add(dollars);
+                    }
+
+                    await Delay(10000);
+                    var updatedInventory = JsonConvert.SerializeObject(inventory);
+                    existingPlayer.Inventory = updatedInventory;
+                    dbContext.SaveChanges();
+
+                    GetPlayerData(player);
+                    TriggerClientEvent(player, "core:sendNotif", $"Vous avez récupérer ~g~${dollars.Quantity}");
+                } else
+                {
+                    Debug.WriteLine("Error in core:robbery: Player doesn't exist");
                 }
             }
         }
