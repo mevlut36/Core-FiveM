@@ -12,11 +12,25 @@ namespace Core.Server
         public DataContext() { }
 
         public DbSet<PlayerTable> Player { get; set; }
-
+        public DbSet<CompanyTable> Company { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseMySql("server=localhost;database=fivem;user=root;password=");
         }
+    }
+
+    [Table("company")]
+    public class CompanyTable
+    {
+        [Key]
+        [Column("id")]
+        public int Id { get; set; }
+        [Column("name")]
+        public string Name { get; set; }
+        [Column("chest")]
+        public string Chest { get; set; }
+        [Column("taxes")]
+        public string Taxes { get; set; }
     }
 
     [Table("player")]
@@ -27,8 +41,12 @@ namespace Core.Server
         public int Id { get; set; }
         [Column("license")]
         public string License { get; set; }
+        [Column("discord")]
+        public string Discord { get; set; }
         [Column("bitcoin")]
         public int Bitcoin { get; set; }
+        [Column("state")]
+        public string State { get; set; }
         [Column("skin")]
         public string Skin { get; set; }
         [Column("firstname")]

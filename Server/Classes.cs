@@ -8,6 +8,7 @@ namespace Core.Server
     public class PlayerInstance
     {
         public int Id { get; set; }
+        public string Discord { get; set; }
         public string Skin { get; set; }
         public string Firstname { get; set; }
         public string Lastname { get; set; }
@@ -85,7 +86,6 @@ namespace Core.Server
         public int LightBar { get; set; }
     }
 
-
     public class BootInfo
     {
         public string Item { get; set; }
@@ -105,6 +105,13 @@ namespace Core.Server
         public string Date { get; set; }
     }
 
+    public class CompanyInstance
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public List<ItemQuantity> Chest { get; set; }
+        public string Taxes { get; set; }
+    }
 
     public class ItemQuantity
     {

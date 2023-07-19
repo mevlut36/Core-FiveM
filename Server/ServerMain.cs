@@ -1,27 +1,69 @@
 using System;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using CitizenFX.Core;
 using System.Linq;
 using System.Collections.Generic;
-using CitizenFX.Core.Native;
 using static CitizenFX.Core.Native.API;
 using Newtonsoft.Json;
-using System.Dynamic;
-using System.Numerics;
-using System.Text;
-using System.Runtime.ConstrainedExecution;
-using System.Runtime.CompilerServices;
 
 namespace Core.Server
 {
     public class ServerMain : BaseScript
     {
+        List<Vector3> PNJ = new List<Vector3>
+        {
+            new Vector3(188.4f, -889.3f, 30.6f),
+            new Vector3(24.3f, -1346.6f, 29.3f),
+            new Vector3(-46.4f, -1758.1f, 29.4f),
+            new Vector3(-3243.2f, 999.9f, 12.7f),
+            new Vector3(-3040.9f, 583.9f, 7.9f),
+            new Vector3(-2966.1f, 390.3f, 15),
+            new Vector3(-1819.2f, 792.6f, 138.1f),
+            new Vector3(-1485.6f, -378.1f, 40f),
+            new Vector3(2555.6f, 380.8f, 108.6f),
+            new Vector3(1392.3f, 3606.4f, 34.9f),
+            new Vector3(1696.9f, 4923.1f, 42),
+            new Vector3(1165.2f, -323.6f, 69.2f),
+            new Vector3(372.2f, 326.5f, 103.5f),
+            new Vector3(-1222.2f, -908.8f, 12.3f),
+            new Vector3(1133.6f, -981.7f, 46.4f),
+            new Vector3(549.2f, 2670.9f, 42.1f),
+            new Vector3(1727.6f, 6415.3f, 35),
+
+            new Vector3(200.4f, -870.9f, 30.6f),
+            new Vector3(73.9f, -1393.1f, 29.2f),
+            new Vector3(427.2f, -805.9f, 29.4f),
+            new Vector3(127.1f, -224.5f, 54.4f),
+            new Vector3(-164.9f, -302, 39.6f),
+            new Vector3(-708.3f, -152.6f, 37.4f),
+            new Vector3(-823.3f, -1072.2f, 11.2f),
+            new Vector3(-1193.8f, -766.5f, 17.2f),
+            new Vector3(-3169.1f, 1042.7f, 20.7f),
+            new Vector3(612.7f, 2763.4f, 42),
+            new Vector3(1695.3f, 4823.3f, 42),
+            new Vector3(1196.4f, 2711.7f, 38.1f),
+            new Vector3(5.9f, 6511.3f, 31.7f)
+        };
+
         public ServerMain()
         {
             Debug.WriteLine("Hi from Core.Server!");
-            EventHandlers["playerDropped"] += new Action<Player, string>(IsPlayerDisconnecting);
+            EventHandlers["playerDropped"] += new Action<Player>(IsPlayerDisconnecting);
             EventHandlers["core:kick"] += new Action<Player, int, string>(Kick);
+            EventHandlers["onServerResourceStart"] += new Action(OnResourceStart);
+        }
+
+        public async void OnResourceStart()
+        {
+            var lissPedId = new List<int>();
+            foreach(var ped in PNJ)
+            {
+                int PedId = CreatePed(26, (uint)GetHashKey("a_m_m_polynesian_01"), ped.X, ped.Y, ped.Z, 0, true, true);
+                while (DoesEntityExist(PedId) == false) { await Delay(50); }
+                await Delay(10);
+                int PedNetId = NetworkGetNetworkIdFromEntity(PedId);
+                lissPedId.Add(PedNetId);
+            }
+            TriggerClientEvent("core:pedsIdList", JsonConvert.SerializeObject(lissPedId));
         }
 
         [EventHandler("core:isPlayerRegistered")]
@@ -38,6 +80,7 @@ namespace Core.Server
                     TriggerClientEvent(player, "core:getSkin", existingPlayer.Skin);
                     TriggerClientEvent(player, "core:sendNotif", $"~g~Bienvenue ~w~{existingPlayer.FirstName}");
                     TriggerClientEvent(player, "core:teleportLastPosition", existingPlayer.LastPosition);
+                    GetPlayerData(player);
                 }
                 else
                 {
@@ -48,18 +91,20 @@ namespace Core.Server
         }
 
         [EventHandler("core:requestPlayerData")]
-        public void GetPlayerData([FromSource] Player player)
+        public void GetPlayerData([FromSource] Player player, int playerId = -1)
         {
             using (var dbContext = new DataContext())
             {
-                var networkId = player.Handle;
-                var license = player.Identifiers["license"];
+                Player targetPlayer = playerId == -1 ? player : Players[playerId];
+                var license = targetPlayer.Identifiers["license"];
                 var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
+
                 if (existingPlayer != null)
                 {
                     var playerInstance = new PlayerInstance
                     {
                         Id = existingPlayer.Id,
+                        Discord = existingPlayer.Discord,
                         Skin = existingPlayer.Skin,
                         Firstname = existingPlayer.FirstName,
                         Lastname = existingPlayer.LastName,
@@ -77,9 +122,37 @@ namespace Core.Server
 
                     var json = JsonConvert.SerializeObject(playerInstance);
                     TriggerClientEvent(player, "core:getPlayerData", json);
+                    TriggerClientEvent(player, "legal_client:getPlayerData", json);
+                    TriggerClientEvent(player, "illegal_client:getPlayerData", json);
                 }
             }
         }
+
+        [EventHandler("legal_server:requestCompanyData")]
+        public void GetCompanyData([FromSource] Player player, int id)
+        {
+            using (var dbContext = new DataContext())
+            {
+                var networkId = player.Handle;
+                var license = player.Identifiers["license"];
+                var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
+                var existingCompany = dbContext.Company.FirstOrDefault(u => u.Id == id);
+
+                if (existingPlayer != null)
+                {
+                    var chestInstance = new CompanyInstance
+                    {
+                        Id = existingCompany.Id,
+                        Name = existingCompany.Name,
+                        Chest = JsonConvert.DeserializeObject<List<ItemQuantity>>(existingCompany.Chest),
+                        Taxes = existingCompany.Taxes
+                    };
+                    var json = JsonConvert.SerializeObject(chestInstance);
+                    TriggerClientEvent(player, "legal_client:getCompanyData", json);
+                }
+            }
+        }
+
 
         [EventHandler("core:setClothes")]
         public void SetClothes([FromSource] Player player)
@@ -127,11 +200,13 @@ namespace Core.Server
                 var newPlayer = new PlayerTable
                 {
                     License = player.Identifiers["license"],
+                    Discord = player.Identifiers["discord"],
+                    State = "{\"health\":200,\"thirst\":200}",
                     Skin = data.Skin,
                     FirstName = data.Firstname,
                     LastName = data.Lastname,
                     Rank = "player",
-                    Job = "chomage",
+                    Job = "\t{\"id\":\"0\",\"rank\":1}",
                     Organisation = "aucun",
                     Clothes = data.ClothesList,
                     ClothesList = data.ClothesList,
@@ -168,7 +243,32 @@ namespace Core.Server
             }
         }
 
-        public void IsPlayerDisconnecting([FromSource] Player player, string reason)
+        [EventHandler("core:updateClothe")]
+        public void UpdateClothe([FromSource] Player player, string json)
+        {
+            var data = JsonConvert.DeserializeObject<ClothesInfo>(json);
+            using (var dbContext = new DataContext())
+            {
+                var newClothes = dbContext.Player.FirstOrDefault(a => a.License == player.Identifiers["license"]);
+
+                if (newClothes != null)
+                {
+                    var clothesList = JsonConvert.DeserializeObject<List<ClothesInfo>>(newClothes.Clothes);
+                    var itemToUpdate = clothesList.FirstOrDefault(c => c.Component == data.Component);
+
+                    if (itemToUpdate != null)
+                    {
+                        itemToUpdate.Drawable = data.Drawable;
+                        itemToUpdate.Texture = data.Texture;
+                        itemToUpdate.Palette = data.Palette;
+                        newClothes.Clothes = JsonConvert.SerializeObject(clothesList);
+                        dbContext.SaveChanges();
+                    }
+                }
+            }
+        }
+
+        public void IsPlayerDisconnecting([FromSource] Player player)
         {
             using (var dbContext = new DataContext())
             {
@@ -292,6 +392,7 @@ namespace Core.Server
                             existingPlayer.Money -= cost;
                             itemFilter.Quantity += amount;
                             TriggerClientEvent(player, "core:sendNotif", $"Vous avez payé ~r~${cost}~w~.");
+                            GetPlayerData(player);
                         }
                         else
                         {
@@ -304,6 +405,7 @@ namespace Core.Server
 
                             items.Add(newItem);
                             TriggerClientEvent(player, "core:sendNotif", $"Vous avez ajouté un nouvel article : {itemName}.\n~r~-${cost}");
+                            GetPlayerData(player);
                         }
 
                         existingPlayer.Inventory = JsonConvert.SerializeObject(items);
@@ -354,6 +456,7 @@ namespace Core.Server
                                 };
 
                                 items.Add(newItem);
+                                GetPlayerData(player);
                                 TriggerClientEvent(player, "core:sendNotif", $"Vous avez {action} ~g~${amount}~w~.");
                             }
                         }
@@ -401,7 +504,7 @@ namespace Core.Server
                         existingPlayer.Money -= cost;
                         items.Add(newItem);
                         TriggerClientEvent(player, "core:sendNotif", $"Vous avez acheté un nouvel article : {name}.\n~r~-${cost}");
-
+                        GetPlayerData(player);
                         existingPlayer.ClothesList = JsonConvert.SerializeObject(items);
                     }
                     else
@@ -460,15 +563,25 @@ namespace Core.Server
             using (var dbContext = new DataContext())
             {
                 var existingPlayer = dbContext.Player.FirstOrDefault(u => u.License == license);
+                var existingCompany = dbContext.Company.FirstOrDefault(u => u.Name == company);
                 if (existingPlayer != null)
                 {
                     var bills = JsonConvert.DeserializeObject<List<Bills>>(existingPlayer.Bills);
-
+                    var companyChest = JsonConvert.DeserializeObject<List<ItemQuantity>>(existingCompany.Chest);
+                    var dollars = new ItemQuantity
+                    {
+                        ItemType = "item",
+                        Item = "Dollars",
+                        Quantity = amount,
+                    };
                     var selectedBill = bills.FirstOrDefault(b => b.Company == company && b.Amount == amount);
                     if (selectedBill != null)
                     {
                         bills.Remove(selectedBill);
+                        companyChest.Add(dollars);
                         existingPlayer.Bills = JsonConvert.SerializeObject(bills);
+                        existingCompany.Chest = JsonConvert.SerializeObject(companyChest);
+                        GetCompanyData(player, existingCompany.Id);
                         dbContext.SaveChanges();
                     }
                 }
@@ -477,31 +590,11 @@ namespace Core.Server
             GetPlayerData(player);
         }
 
-        // TODO
-        [EventHandler("core:addBill")]
-        public void AddBill([FromSource] Player player)
-        {
-            var license = player.Identifiers["license"];
-            var networkId = player.Handle;
-            var playerPed = GetPlayerPed(networkId);
-            using (var dbContext = new DataContext())
-            {
-                var existingPlayer = dbContext.Player.FirstOrDefault(u => u.License == license);
-
-                if (existingPlayer != null)
-                {
-                    existingPlayer.Bills += "Add";
-                }
-            }
-            TriggerClientEvent(player, "core:sendNotif", $"Vous avez reçu une facture.");
-        }
-
         [EventHandler("core:addItem")]
-        public void AddItem([FromSource] Player player, string item, int quantity)
+        public void AddItem([FromSource] Player player, string item, int quantity, int playerId = -1)
         {
-            var license = player.Identifiers["license"];
-            var networkId = player.Handle;
-            var playerPed = GetPlayerPed(networkId);
+            Player targetPlayer = playerId == -1 ? player : Players[playerId];
+            var license = targetPlayer.Identifiers["license"];
             using (var dbContext = new DataContext())
             {
                 var existingPlayer = dbContext.Player.FirstOrDefault(u => u.License == license);
@@ -531,8 +624,46 @@ namespace Core.Server
 
                     var updatedInventory = JsonConvert.SerializeObject(inventory);
                     existingPlayer.Inventory = updatedInventory;
-                    GetPlayerData(player);
                     dbContext.SaveChanges();
+                    GetPlayerData(player);
+                }
+            }
+        }
+
+        [EventHandler("illegal_server:addDrug")]
+        public void AddDrug([FromSource] Player player, string item, int quantity)
+        {
+            var license = player.Identifiers["license"];
+            using (var dbContext = new DataContext())
+            {
+                var existingPlayer = dbContext.Player.FirstOrDefault(u => u.License == license);
+
+                if (existingPlayer != null)
+                {
+                    var inventory = JsonConvert.DeserializeObject<List<ItemQuantity>>(existingPlayer.Inventory);
+                    var itemFilter = inventory.FirstOrDefault(i => i.Item == item);
+                    if (itemFilter != null)
+                    {
+                        itemFilter.Quantity += quantity;
+                        TriggerClientEvent(player, "core:sendNotif", $"Vous avez récolté un total de ~r~{quantity}~w~ {item}.");
+                    }
+                    else
+                    {
+                        var newItem = new ItemQuantity
+                        {
+                            ItemType = "item",
+                            Item = item,
+                            Quantity = quantity
+                        };
+
+                        inventory.Add(newItem);
+                        TriggerClientEvent(player, "core:sendNotif", $"Vous avez récolté un total de {quantity} {item}");
+                    }
+
+                    var updatedInventory = JsonConvert.SerializeObject(inventory);
+                    existingPlayer.Inventory = updatedInventory;
+                    dbContext.SaveChanges();
+                    GetPlayerData(player);
                 }
             }
         }
@@ -560,8 +691,8 @@ namespace Core.Server
 
                     var updatedInventory = JsonConvert.SerializeObject(inventory);
                     existingPlayer.Inventory = updatedInventory;
-                    GetPlayerData(player);
                     dbContext.SaveChanges();
+                    GetPlayerData(player);
                 }
             }
         }
@@ -753,6 +884,7 @@ namespace Core.Server
                         var playerInstance = new PlayerInstance
                         {
                             Id = existingPlayer.Id,
+                            Discord = existingPlayer.Discord,
                             Skin = existingPlayer.Skin,
                             Firstname = existingPlayer.FirstName,
                             Lastname = existingPlayer.LastName,
@@ -777,6 +909,45 @@ namespace Core.Server
                 TriggerClientEvent("core:receivePlayers", jsonPlayerInstances, jsonPlayersHandle);
             }
         }
+
+        [EventHandler("core:getPlayersRobbery")]
+        public void GetPlayersNameRobbery([FromSource] Player player, string json)
+        {
+            using (var dbContext = new DataContext())
+            {
+                var playersId = JsonConvert.DeserializeObject<List<int>>(json);
+                var playersList = new List<PlayerInstance>();
+
+                foreach (var playerId in playersId)
+                {
+                    Player targetPlayer = playerId == -1 ? player : Players[playerId];
+                    var license = targetPlayer.Identifiers["license"];
+                    var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
+                    if (existingPlayer != null)
+                    {
+                        var pInstance = new PlayerInstance
+                        {
+                            Discord = existingPlayer.Discord,
+                            Firstname = existingPlayer.FirstName,
+                            Lastname = existingPlayer.LastName,
+                            Rank = existingPlayer.Rank,
+                            Job = existingPlayer.Job,
+                            Organisation = existingPlayer.Organisation,
+                            Cars = existingPlayer.Cars,
+                            Money = existingPlayer.Money,
+                            Inventory = existingPlayer.Inventory
+                        };
+
+                        Debug.WriteLine($"server: {pInstance.Lastname}");
+                        playersList.Add(pInstance);
+                    }
+                }
+
+                var jsonPlayers = JsonConvert.SerializeObject(playersList);
+                TriggerClientEvent("core:reveivePlayersRobbery", jsonPlayers);
+            }
+        }
+
 
         [EventHandler("core:warn")]
         public void Warn(int playerServerId, string message)
