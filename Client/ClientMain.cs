@@ -70,7 +70,6 @@ namespace Core.Client
 
             EventHandlers["core:getPlayerData"] += new Action<string>(PlayerMenu.GetPlayerData);
             EventHandlers["core:reveivePlayersRobbery"] += new Action<string>(Bank.GetPlayers);
-            EventHandlers["core:pedsIdList"] += new Action<string>(GetPnjId);
             RegisterCommand("report", new Action<int, List<object>, string>((source, args, raw) =>
             {
                 string arguments = string.Join(" ", args);
@@ -125,17 +124,43 @@ namespace Core.Client
             "RIPLEY", // Regularly spawns on the LSIA airport surface
         };
 
-        public void GetPnjId(string jsonPedId)
+        List<Vector3> pedList = new List<Vector3>();
+        List<int> pedId = new List<int>();
+
+        [EventHandler("core:spawnPeds")]
+        public async void SpawnPed(string json)
         {
-            var pedId = JsonConvert.DeserializeObject<List<int>>(jsonPedId);
-            foreach(var ped in pedId)
+            pedList = JsonConvert.DeserializeObject<List<Vector3>>(json);
+
+            foreach (var ped in pedList)
             {
-                int PedId = NetToPed(ped);
-                FreezeEntityPosition(PedId, true);
-                SetEntityInvincible(PedId, true);
-                SetBlockingOfNonTemporaryEvents(PedId, true);
+                var PedId = await World.CreatePed(PedHash.Malibu01AMM, new Vector3(ped.X, ped.Y, ped.Z));
+                Debug.WriteLine($"Created ped with ID {PedId}");
+                SetEntityInvincible(PedId.Handle, true);
+                SetBlockingOfNonTemporaryEvents(PedId.Handle, true);
+                pedId.Add(PedId.Handle);
             }
         }
+
+        public bool IsRobbing = false;
+        public void CheckIfPlayerIsAimingAtPed()
+        {
+            int playerId = PlayerId();
+
+            foreach (var ped in pedId)
+            {
+                if (IsPlayerFreeAimingAtEntity(playerId, ped) && IsRobbing == false)
+                {
+                    IsRobbing = true;
+                    Debug.WriteLine($"Robbing ID {ped}");
+                    Format.SendNotif("~r~Braquage en cours...");
+                    TriggerServerEvent("core:robbery");
+                    PlaySoundFrontend(-1, "ROBBERY_MONEY_TOTAL", "HUD_FRONTEND_CUSTOM_SOUNDSET", true);
+                }
+            }
+
+        }
+
 
         public void SetHealth(int health)
         {
@@ -337,7 +362,13 @@ namespace Core.Client
             {
                 DrawPlayerHealthBar();
             }
-
+            foreach (var ped in pedList)
+            {
+                if (GetEntityCoords(GetPlayerPed(-1), true).DistanceToSquared2D(ped) < 10)
+                {
+                    CheckIfPlayerIsAimingAtPed();
+                }
+            }
         }
         public Task PopulationManaged()
         {
