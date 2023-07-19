@@ -59,6 +59,7 @@ namespace Core.Client
                 myBlip.Name = "Magasin de vêtements";
                 myBlip.Color = BlipColor.TrevorOrange;
                 myBlip.IsShortRange = true;
+
             }
         }
 
@@ -68,8 +69,7 @@ namespace Core.Client
 
             foreach (var cloth in ClothShopList)
             {
-                var distance = GetDistanceBetweenCoords(cloth.Checkout.X, cloth.Checkout.Y, cloth.Checkout.Z, playerCoords.X, playerCoords.Y, playerCoords.Z, false);
-
+                var distance = playerCoords.DistanceToSquared(cloth.Checkout);
                 if (distance < 7)
                 {
                     Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir");
@@ -78,7 +78,6 @@ namespace Core.Client
                     {
                         var menu = new NativeMenu("Magasin de vêtements", $"Magasin - {cloth.ShopName}")
                         {
-                            TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                             UseMouse = false,
                             HeldTime = 100
                         };
@@ -98,7 +97,6 @@ namespace Core.Client
                         {
                             var subMenu = new NativeMenu($"{component.Value}", $"{component.Value}")
                             {
-                                TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                                 UseMouse = false
                             };
                             Pool.Add(subMenu);

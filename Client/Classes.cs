@@ -57,6 +57,7 @@ namespace Core.Client
     public class PlayerInstance
     {
         public int Id { get; set; }
+        public string Discord { get; set; }
         public string Skin { get; set; }
         public string Firstname { get; set; }
         public string Lastname { get; set; }

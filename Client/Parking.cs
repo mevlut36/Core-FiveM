@@ -2,13 +2,9 @@
 using CitizenFX.Core.Native;
 using LemonUI;
 using LemonUI.Menus;
-using Mono.CSharp;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 using static CitizenFX.Core.Native.API;
 
@@ -188,8 +184,10 @@ namespace Core.Client
                 };
 
 
-                List<VehicleInfo> cars = new List<VehicleInfo>();
-                cars.Add(info);
+                List<VehicleInfo> cars = new List<VehicleInfo>
+                {
+                    info
+                };
 
                 string json = JsonConvert.SerializeObject(cars);
 
@@ -201,97 +199,116 @@ namespace Core.Client
             }
         }
 
-
         public void ParkingMenu()
         {
-            var playerCoords = GetEntityCoords(PlayerPedId(), false);
-            float dist = 0;
+            var playerPedId = PlayerPedId();
+            var playerCoords = GetEntityCoords(playerPedId, false);
+            bool isPlayerInVehicle = IsPedInAnyVehicle(playerPedId, false);
+
+            NativeMenu menu = null;
+
             foreach (var entry in parkingDict)
             {
-                dist = entry.Key.DistanceToSquared(playerCoords);
-                if (dist < 100)
+                if (!isPlayerInVehicle)
                 {
-                    Format.SetMarker(entry.Key, MarkerType.CarSymbol);
-                }
-                if (dist < 2)
-                {
-                    Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir la liste des véhicules");
-                    // Sortie de véhicule
-                    if (IsControlPressed(0, 38))
+                    var dist = entry.Key.DistanceToSquared(playerCoords);
+
+                    if (dist < 100)
                     {
-                        var menu = new NativeMenu("Garage", "Sortir un véhicule");
+                        Format.SetMarker(entry.Key, MarkerType.CarSymbol);
+                    }
+                    if (dist < 2 && menu == null)
+                    {
                         var parkingList = entry.Value;
-                        var parkingListOccupied = new List<Vector3>();
-                        foreach (var car in CarList)
+                        menu = PrepareParkingMenu(parkingList);
+
+                        Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir la liste des véhicules");
+
+                        if (IsControlPressed(0, 38))
                         {
-                            NativeItem item = new NativeItem($"{car.Model.ToString().ToUpper()} [{car.Plate}]");
-                            menu.Add(item);
-                            item.Activated += (sender, e) =>
-                            {
-                                List<Vector3> localParkingList = new List<Vector3>(parkingList);
-                                List<Vector3> localParkingListOccupied = new List<Vector3>(parkingListOccupied);
-
-                                if (localParkingList.Count > 0)
-                                {
-                                    Vector3 spawnPosition = GetAvailableSpawnPosition(localParkingList, localParkingListOccupied);
-                                    if (spawnPosition != Vector3.Zero)
-                                    {
-                                        var model = new Model(car.Model);
-                                        model.Request();
-                                        SetEntityAsMissionEntity(model, true, false);
-                                        World.CreateVehicle(model, spawnPosition, heading: 30).ContinueWith(vehTask =>
-                                        {
-                                            if (!vehTask.IsFaulted && vehTask.Result != null && vehTask.Result.Exists())
-                                            {
-                                                SetVehicleNumberPlateText(vehTask.Result.Handle, $"{car.Plate}");
-                                                SetVehicleColours(vehTask.Result.Handle, car.ColorPrimary, car.ColorSecondary);
-                                                SetVehicleDoorsLocked(vehTask.Result.Handle, 2);
-                                                Format.SendNotif("~g~Votre véhicule est bien sorti.");
-                                                menu.Visible = false;
-                                            }
-                                            else
-                                            {
-                                                Format.SendNotif("~r~Erreur lors de la création du véhicule.");
-                                            }
-                                        });
-                                    }
-                                    else
-                                    {
-                                        Format.SendNotif("~r~Toutes les positions de stationnement sont occupées.");
-                                    }
-                                }
-                                else
-                                {
-                                    Format.SendNotif("~r~Vous ne pouvez pas sortir ce véhicule. Quelque chose l'en empêche.");
-                                }
-                            };
+                            menu.Visible = true;
                         }
-
-                        menu.UseMouse = false;
-                        Pool.Add(menu);
-                        menu.Visible = true;
                     }
                 }
             }
-            foreach(var entry in parkingEnterList)
+
+            foreach (var entry in parkingEnterList)
             {
-                float distEntrer = entry.DistanceToSquared(playerCoords);
-                if (IsPedInAnyVehicle(GetPlayerPed(-1), false) == true)
+                if (isPlayerInVehicle)
                 {
+                    var distEntrer = entry.DistanceToSquared(playerCoords);
+
                     Format.SetMarker(entry, MarkerType.CarSymbol);
+
                     if (distEntrer < 3)
                     {
-                        // Entrer de véhicule
                         Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour faire rentrer le véhicule");
+
                         if (IsControlPressed(0, 38))
                         {
-                            var vehicle = GetVehiclePedIsIn(GetPlayerPed(-1), false);
+                            var vehicle = GetVehiclePedIsIn(playerPedId, false);
                             SetEntityAsMissionEntity(vehicle, true, true);
                             DeleteVehicle(ref vehicle);
                         }
                     }
                 }
             }
+        }
+
+        private NativeMenu PrepareParkingMenu(List<Vector3> parkingList)
+        {
+            var menu = new NativeMenu("Garage", "Sortir un véhicule");
+
+            foreach (var car in CarList)
+            {
+                NativeItem item = new NativeItem($"{car.Model.ToString().ToUpper()} [{car.Plate}]");
+                menu.Add(item);
+                item.Activated += (sender, e) =>
+                {
+                    List<Vector3> localParkingList = new List<Vector3>(parkingList);
+                    var parkingListOccupied = new List<Vector3>();
+                    List<Vector3> localParkingListOccupied = new List<Vector3>(parkingListOccupied);
+
+                    if (localParkingList.Count > 0)
+                    {
+                        Vector3 spawnPosition = GetAvailableSpawnPosition(localParkingList, localParkingListOccupied);
+                        if (spawnPosition != Vector3.Zero)
+                        {
+                            var model = new Model(car.Model);
+                            model.Request();
+                            SetEntityAsMissionEntity(model, true, false);
+                            World.CreateVehicle(model, spawnPosition, heading: 30).ContinueWith(vehTask =>
+                            {
+                                if (!vehTask.IsFaulted && vehTask.Result != null && vehTask.Result.Exists())
+                                {
+                                    SetVehicleNumberPlateText(vehTask.Result.Handle, $"{car.Plate}");
+                                    SetVehicleColours(vehTask.Result.Handle, car.ColorPrimary, car.ColorSecondary);
+                                    SetVehicleDoorsLocked(vehTask.Result.Handle, 2);
+                                    Format.SendNotif("~g~Votre véhicule est bien sorti.");
+                                    menu.Visible = false;
+                                }
+                                else
+                                {
+                                    Format.SendNotif("~r~Erreur lors de la création du véhicule.");
+                                }
+                            });
+                        }
+                        else
+                        {
+                            Format.SendNotif("~r~Toutes les positions de stationnement sont occupées.");
+                        }
+                    }
+                    else
+                    {
+                        Format.SendNotif("~r~Vous ne pouvez pas sortir ce véhicule. Quelque chose l'en empêche.");
+                    }
+                };
+            }
+
+            menu.UseMouse = false;
+            Pool.Add(menu);
+
+            return menu;
         }
 
         public Vector3 GetAvailableSpawnPosition(List<Vector3> parkingList, List<Vector3> parkingListOccupied)

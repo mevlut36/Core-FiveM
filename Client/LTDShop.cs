@@ -90,8 +90,6 @@ namespace Core.Client
             LTDShopInfo ltd16 = new LTDShopInfo("Mont Chiliad", new Vector3(1729.0f, 6414.4f, 35), new Vector3(1727.6f, 6415.3f, 35), new Vector3(1735.3f, 6411, 35));
             LTDShops.Add(ltd16);
 
-            LTDShopInfo ltd17 = new LTDShopInfo("Mont Chiliad", new Vector3(1729.0f, 6414.4f, 35), new Vector3(1727.6f, 6415.3f, 35), new Vector3(1735.3f, 6411, 35));
-            LTDShops.Add(ltd17);
             foreach (var ltd in LTDShops)
             {
                 Blip myBlip = World.CreateBlip(ltd.Checkout);
@@ -109,8 +107,7 @@ namespace Core.Client
 
             foreach (var ltd in LTDShops)
             {
-                var distance = GetDistanceBetweenCoords(ltd.Checkout.X, ltd.Checkout.Y, ltd.Checkout.Z, playerCoords.X, playerCoords.Y, playerCoords.Z, false);
-
+                var distance = playerCoords.DistanceToSquared(ltd.Checkout);
                 if (distance < 4)
                 {
                     Format.SetMarker(ltd.Checkout, MarkerType.HorizontalCircleFat);
@@ -123,7 +120,6 @@ namespace Core.Client
                     {
                         var menu = new NativeMenu("LTD", $"LTD - {ltd.LTDName}")
                         {
-                            TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                             UseMouse = false
                         };
                         Pool.Add(menu);
@@ -170,8 +166,7 @@ namespace Core.Client
 
             foreach (var ltd in LTDShops)
             {
-                var distance = GetDistanceBetweenCoords(ltd.ATM.X, ltd.ATM.Y, ltd.ATM.Z, playerCoords.X, playerCoords.Y, playerCoords.Z, false);
-
+                var distance = playerCoords.DistanceToSquared(ltd.ATM);
                 if (distance < 4)
                 {
                     Format.SetMarker(ltd.ATM, MarkerType.HorizontalCircleFat);
@@ -184,7 +179,6 @@ namespace Core.Client
                     {
                         var menu = new NativeMenu("Banque", "Bienvenue")
                         {
-                            TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                             UseMouse = false
                         };
                         Pool.Add(menu);

@@ -68,7 +68,6 @@ namespace Core.Client
                     {
                         var menu = new NativeMenu("Ammu-Nation", "Acheter vos armes")
                         {
-                            TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                             UseMouse = false
                         };
                         Pool.Add(menu);

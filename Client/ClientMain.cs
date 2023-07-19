@@ -2,10 +2,12 @@ using CitizenFX.Core;
 using CitizenFX.Core.Native;
 using CitizenFX.Core.NaturalMotion;
 using LemonUI;
+using LemonUI.Menus;
 using Mono.CSharp;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using static CitizenFX.Core.Native.API;
 
@@ -37,6 +39,7 @@ namespace Core.Client
         public bool IsDead = false;
         private DateTime DeathTime;
         public ReportSystem reportSystem = new ReportSystem();
+        List<LTDItems> NarcoItems = new List<LTDItems>();
         public ClientMain()
         {
             Debug.WriteLine("Hi from Core.Client!");
@@ -66,6 +69,8 @@ namespace Core.Client
             DiscordPresence = new DiscordPresence(this);
 
             EventHandlers["core:getPlayerData"] += new Action<string>(PlayerMenu.GetPlayerData);
+            EventHandlers["core:reveivePlayersRobbery"] += new Action<string>(Bank.GetPlayers);
+            EventHandlers["core:pedsIdList"] += new Action<string>(GetPnjId);
             RegisterCommand("report", new Action<int, List<object>, string>((source, args, raw) =>
             {
                 string arguments = string.Join(" ", args);
@@ -78,6 +83,17 @@ namespace Core.Client
                 reportSystem.AddReport(newReport);
             }), false);
             Tick += ScenarioSuppressionLoop;
+
+            TriggerServerEvent("core:spawnPnj", "csb_chin_goon", new Vector3(123.5f, -1040.4f, 29));
+            var item1 = new LTDItems("Ordinateur", "Idéal pour faire du pentest...", 25000);
+            NarcoItems.Add(item1);
+
+            var item2 = new LTDItems("Perceuse", "Idéale pour percer une porte...", 25000);
+            NarcoItems.Add(item2);
+
+            var item3 = new LTDItems("Phone", "Excellent téléphone", 1000);
+            NarcoItems.Add(item3);
+
         }
 
         private static readonly List<string> SCENARIO_TYPES = new List<string>
@@ -108,6 +124,18 @@ namespace Core.Client
             "AIRTUG", // Regularly spawns on the LSIA airport surface
             "RIPLEY", // Regularly spawns on the LSIA airport surface
         };
+
+        public void GetPnjId(string jsonPedId)
+        {
+            var pedId = JsonConvert.DeserializeObject<List<int>>(jsonPedId);
+            foreach(var ped in pedId)
+            {
+                int PedId = NetToPed(ped);
+                FreezeEntityPosition(PedId, true);
+                SetEntityInvincible(PedId, true);
+                SetBlockingOfNonTemporaryEvents(PedId, true);
+            }
+        }
 
         public void SetHealth(int health)
         {
@@ -182,6 +210,7 @@ namespace Core.Client
                     DeathAnimation(600000);
                 }
                 await Delay(1);
+                SetEntityInvincible(GetPlayerPed(-1), true);
                 var remainingTime = TimeSpan.FromMinutes(10) - (DateTime.UtcNow - DeathTime);
                 var totalMinutes = Math.Round(remainingTime.TotalMinutes);
 
@@ -200,6 +229,7 @@ namespace Core.Client
                                 PlayerMenu.PlayerInst.Money -= 10000;
                                 SetEntityHealth(GetPlayerPed(-1), 200);
                                 SetEntityCoords(GetPlayerPed(-1), -457.6f, -283.3f, 36.3f, true, false, true, false);
+                                SetEntityInvincible(GetPlayerPed(-1), false);
                                 IsDead = false;
                             }
                         }
@@ -219,6 +249,61 @@ namespace Core.Client
                 SetEntityHealth(GetPlayerPed(-1), 200);
                 SetEntityCoords(GetPlayerPed(-1), -457.6f, -283.3f, 36.3f, true, false, true, false);
                 IsDead = false;
+                SetEntityInvincible(GetPlayerPed(-1), false);
+            }
+        }
+
+
+        public void NarcoMenu()
+        {
+            var playerCoords = GetEntityCoords(PlayerPedId(), false);
+            var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerMenu.PlayerInst.Inventory);
+            var pnj = new Vector3(123.5f, -1040.4f, 29);
+
+            var distance = GetDistanceBetweenCoords(pnj.X, pnj.Y, pnj.Z, playerCoords.X, playerCoords.Y, playerCoords.Z, false);
+
+            if (distance < 5)
+            {
+                Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir");
+
+                if (IsControlJustPressed(0, 38))
+                {
+                    var menu = new NativeMenu("Pablo", $"Chut")
+                    {
+                        UseMouse = false
+                    };
+                    Pool.Add(menu);
+                    menu.Visible = true;
+
+                    var dollarsItem = items.FirstOrDefault(item => item.Item == "Dollars");
+
+                    foreach (var item in NarcoItems)
+                    {
+                        var itemDefault = items.FirstOrDefault(i => i.Item == item.Name);
+                        var _ = new NativeItem($"{item.Name}", $"{item.Description}", $"~g~${item.Price}");
+                        menu.Add(_);
+                        _.Activated += async (sender, e) =>
+                        {
+                            var textInput = await Format.GetUserInput("Quantité", "1", 4);
+                            var parsedInput = Int32.Parse(textInput);
+                            var result = item.Price * parsedInput;
+                            if (result <= PlayerMenu.PlayerInst.Money)
+                            {
+                                PlayerMenu.PlayerInst.Money -= result;
+                                PlayerMenu.PlayerInst.Inventory = JsonConvert.SerializeObject(items);
+                                TriggerServerEvent("core:transaction", result, item.Name, parsedInput, "item");
+                                UpdatePlayer();
+                                menu.Visible = false;
+                            }
+                            else
+                            {
+                                Format.SendNotif("~r~La somme est trop élevée");
+                            }
+
+                        };
+                    }
+
+                }
             }
         }
 
@@ -235,7 +320,6 @@ namespace Core.Client
                 SetPlayerWantedLevel(PlayerId(), 0, false);
                 SetPlayerWantedLevelNow(PlayerId(), false);
             }
-
             await PopulationManaged();
             PlayerMenu.F5Menu();
             PlayerMenu.F6Menu();
@@ -247,6 +331,7 @@ namespace Core.Client
             VehicleSystem.OnTick();
             AmmuNation.GunShop();
             ContainerSystem.OnTick();
+            NarcoMenu();
 
             if (Game.PlayerPed != null && Game.PlayerPed.IsAlive)
             {
@@ -264,15 +349,6 @@ namespace Core.Client
             return Task.FromResult(0);
         }
         public Player GetLocalPlayer() => this.LocalPlayer;
-        public void SpawnPnj(Model ped, Vector3 coords, float heading = 0f)
-        {
-            ped.Request();
-            var shop = World.CreatePed(ped, coords, heading);
-            FreezeEntityPosition(shop.Result.Handle, true);
-            SetEntityInvincible(shop.Result.Handle, true);
-            SetBlockingOfNonTemporaryEvents(shop.Result.Handle, true);
-            TaskStartScenarioInPlace(shop.Result.Handle, "WORLD_HUMAN_COP_IDLES", 0, true);
-        }
         public void AddEvent(string key, System.Delegate value) => this.EventHandlers.Add(key, value);
         public void UpdatePlayer()
         {

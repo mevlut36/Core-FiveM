@@ -32,7 +32,6 @@ namespace Core.Client
             Format.SetMarker(Point, MarkerType.ChevronUpx1);
             var menu = new NativeMenu("Container", "Container")
             {
-                TitleFont = Font.ChaletLondon,
                 UseMouse = false
             };
             Pool.Add(menu);
@@ -74,13 +73,11 @@ namespace Core.Client
                     Format.SetMarker(Point, MarkerType.ChevronUpx1);
                     var menu = new NativeMenu("Container", "Container")
                     {
-                        TitleFont = Font.ChaletLondon,
                         UseMouse = false
                     };
                     Pool.Add(menu);
                     var openContainer = new NativeMenu("Votre container", "Votre container")
                     {
-                        TitleFont = Font.ChaletLondon,
                         UseMouse = false
                     };
                     Pool.Add(openContainer);

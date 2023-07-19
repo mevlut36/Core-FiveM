@@ -53,7 +53,6 @@ namespace Core.Client
                 var PlayerPos = GetEntityCoords(PlayerPedId(), true);
                 var MainMenu = new NativeMenu("F5", "Menu personnel")
                 {
-                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     Visible = true,
                     UseMouse = false
                 };
@@ -62,14 +61,12 @@ namespace Core.Client
                     BaseScript.TriggerServerEvent("core:getPlayersList");
                     var adminMenu = new NativeMenu("Administration", "~o~Administration")
                     {
-                        TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                         UseMouse = false
                     };
                     Pool.Add(adminMenu);
                     MainMenu.AddSubMenu(adminMenu);
                     var playerList = new NativeMenu("Liste des joueurs", "Liste des joueurs")
                     {
-                        TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                         UseMouse = false
                     };
                     Pool.Add(playerList);
@@ -82,9 +79,8 @@ namespace Core.Client
 
                         var job = JsonConvert.DeserializeObject<JobInfo>(playerInst.Job);
                         var playerMenu = new NativeMenu($"", $"{handle} | {playerInst.Firstname} {playerInst.Lastname}",
-                        $"ID: {handle}\nDB ID: {playerInst.Id}\nJob: {job.JobID} | {job.JobRank}\nOrga: {playerInst.Organisation}\nRank: {playerInst.Rank}\nBitcoin: {playerInst.Bitcoin}\nMoney: {playerInst.Money}")
+                        $"ID: {handle}\nDB ID: {playerInst.Id}\nDiscord: {playerInst.Discord}\nJob: {job.JobID} | {job.JobRank}\nOrga: {playerInst.Organisation}\nRank: {playerInst.Rank}\nBitcoin: {playerInst.Bitcoin}\nMoney: {playerInst.Money}")
                         {
-                            TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                             UseMouse = false
                         };
                         var reviveP = new NativeItem("Revive", "Réanimer le joueur");
@@ -146,7 +142,6 @@ namespace Core.Client
                     adminMenu.AddSubMenu(playerList);
                     var reportList = new NativeMenu("Liste des reports", "Liste des reports")
                     {
-                        TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                         UseMouse = false
                     };
                     Pool.Add(reportList);
@@ -274,7 +269,6 @@ namespace Core.Client
 
                 var shopMenu = new NativeMenu("Boutique", "~o~Boutique")
                 {
-                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     UseMouse = false
                 };
                 shopMenu.Add(new NativeItem("[V.I.P] Aucun"));
@@ -282,7 +276,6 @@ namespace Core.Client
 
                 var vip = new NativeMenu("VIP", "VIP")
                 {
-                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     UseMouse = false
                 };
                 var vip_1 = new NativeItem("~f~~h~VIP~h~", "", "~g~500~w~ Bitcoins /mois");
@@ -295,7 +288,6 @@ namespace Core.Client
 
                 var carImport = new NativeMenu("Véhicules import", "Véhicules import")
                 {
-                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     UseMouse = false
                 };
                 VehicleImport[] values = (VehicleImport[])System.Enum.GetValues(typeof(VehicleImport));
@@ -310,10 +302,31 @@ namespace Core.Client
                         if (PlayerInst.Bitcoin >= displayAttribute.Price)
                         {
                             BaseScript.TriggerServerEvent("core:bitcoinTransaction", displayAttribute.Price);
-                            var vehicleImport = await World.CreateVehicle(new Model(GetHashKey(displayAttribute.VehicleName)), GetEntityCoords(GetPlayerPed(-1), true));
-                            Parking.SendVehicleInfo(vehicleImport);
+                            PlayerInst.Bitcoin -= displayAttribute.Price;
+                            var model = new Model(GetHashKey(displayAttribute.VehicleName));
+
+                            if (!model.IsInCdImage || !model.IsValid)
+                            {
+                                Debug.WriteLine($"Le modèle du véhicule {model} n'est pas valide ou n'est pas présent dans les fichiers du jeu.");
+                                Format.SendNotif("Erreur: veuillez contacter un admin");
+                                return;
+                            }
+
+                            model.Request();
+
+                            while (!model.IsLoaded)
+                            {
+                                await BaseScript.Delay(0);
+                            }
+
+                            var car = await World.CreateVehicle(model.Hash, GetEntityCoords(GetPlayerPed(-1), true), 90);
+
+                            if (car != null && car.Exists())
+                            {
+                                car.IsPersistent = true;
+                            }
+                            Parking.SendVehicleInfo(car);
                             BaseScript.TriggerServerEvent("core:getVehicleInfo");
-                            Client.UpdatePlayer();
                         } else
                         {
                             Format.SendNotif("Vous n'avez pas assez de ~r~bitcoins~s~...");
@@ -324,7 +337,6 @@ namespace Core.Client
 
                 var lootbox = new NativeMenu("Caisse du mois", "Caisse du mois")
                 {
-                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     UseMouse = false
                 };
                 shopMenu.AddSubMenu(lootbox);
@@ -335,7 +347,6 @@ namespace Core.Client
 
                 var menuInfo = new NativeMenu("Informations", "Informations")
                 {
-                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     UseMouse = false
                 };
                 menuInfo.Add(new NativeItem($"~g~${PlayerInst.Money}"));
@@ -344,7 +355,6 @@ namespace Core.Client
 
                 var inventoryMenu = new NativeMenu("Inventaire", "Inventaire")
                 {
-                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     UseMouse = false
                 };
                 var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerInst.Inventory);
@@ -366,7 +376,6 @@ namespace Core.Client
 
                 var clothMenu = new NativeMenu("Vêtements", "Vêtements")
                 {
-                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     UseMouse = false
                 };
                 var clothesInfo = JsonConvert.DeserializeObject<List<ClothesInfo>>(PlayerInst.ClothesList);
@@ -404,7 +413,6 @@ namespace Core.Client
 
                 var billsMenu = new NativeMenu("Factures", "Factures")
                 {
-                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     UseMouse = false
                 };
                 var bills = JsonConvert.DeserializeObject<List<Bills>>(PlayerInst.Bills);
@@ -436,7 +444,6 @@ namespace Core.Client
 
                 var carMenu = new NativeMenu("Gestion du véhicule", "Gestion du véhicule")
                 {
-                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     UseMouse = false
                 };
 
@@ -522,7 +529,6 @@ namespace Core.Client
 
                 var weaponsMenu = new NativeMenu("Armes", "Armes")
                 {
-                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     UseMouse = false
                 };
 
@@ -624,15 +630,16 @@ namespace Core.Client
                 var textInput = await Format.GetUserInput("Quantité", "1", 4);
                 var parsedInput = int.Parse(textInput);
                 var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
-                var closestPed = World.GetClosest(playerCoords, World.GetAllPeds());
+                var without_me = World.GetAllPeds().Except(new List<Ped>() { Game.PlayerPed });
+                var closestPed = World.GetClosest(playerCoords, without_me.ToArray());
                 if (GetDistanceBetweenCoords(playerCoords.X, playerCoords.Y, playerCoords.Z, closestPed.Position.X, closestPed.Position.Y, closestPed.Position.Z, true) < 10)
                 {
                     if (parsedInput != 0)
                     {
                         BaseScript.TriggerServerEvent("core:removeItem", item, parsedInput);
                         BaseScript.TriggerServerEvent("core:requestPlayerData");
-                        BaseScript.TriggerServerEvent("core:addItem", item, parsedInput, closestPed.Handle);
-                        BaseScript.TriggerServerEvent("core:requestPlayerData", closestPed.Handle);
+                        BaseScript.TriggerServerEvent("core:addItem", item, parsedInput, GetPlayerServerId(NetworkGetPlayerIndexFromPed(closestPed.Handle)));
+                        BaseScript.TriggerServerEvent("core:requestPlayerData", GetPlayerServerId(NetworkGetPlayerIndexFromPed(closestPed.Handle)));
                     }
                 }
             }
@@ -658,6 +665,7 @@ namespace Core.Client
         {
             var player = JsonConvert.DeserializeObject<PlayerInstance>(json);
             PlayerInst.Id = player.Id;
+            PlayerInst.Discord = player.Discord;
             PlayerInst.Firstname = player.Firstname;
             PlayerInst.Lastname = player.Lastname;
             PlayerInst.Rank = player.Rank;

@@ -298,14 +298,13 @@ namespace Core.Client
             eyebrowItem.ItemChanged += (sender, e) =>
             {
                 Skin.Eyebrow = eyebrowItem.SelectedItem;
-                Skin.EyebrowOpacity = 10;
                 SetPedHeadOverlay(player, 2, Skin.Eyebrow, 10 * 0.1f);
                 SetPedHeadOverlayColor(player, 1, 1, 1, 1);
             };
 
             eyebrowColorItem.ItemChanged += (sender, e) =>
             {
-                Skin.BeardColor = eyebrowColorItem.SelectedItem;
+                Skin.EyebrowOpacity = eyebrowColorItem.SelectedItem;
                 SetPedHeadOverlayColor(player, 2, 1, Skin.EyebrowOpacity, Skin.EyebrowOpacity);
             };
 

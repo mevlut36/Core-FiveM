@@ -37,6 +37,8 @@ namespace Core.Client
             myBlip.Color = BlipColor.Yellow;
             myBlip.Name = "Concess Auto";
             myBlip.IsShortRange = true;
+
+            BaseScript.TriggerServerEvent("core:spawnPnj", "cs_josh", Vendeur);
         }
 
         public async void Previsualisation(string vehicle)
@@ -99,7 +101,6 @@ namespace Core.Client
 
                 var menu = new NativeMenu("Prévisualisation")
                 {
-                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     Visible = true,
                     UseMouse = false
                 };
@@ -189,12 +190,11 @@ namespace Core.Client
         public void MenuShop()
         {
             var playerCoords = GetEntityCoords(PlayerPedId(), false);
-            var distance = GetDistanceBetweenCoords(Vendeur.X, Vendeur.Y, Vendeur.Z, playerCoords.X, playerCoords.Y, playerCoords.Z, false);
+            var distance = playerCoords.DistanceToSquared(Vendeur);
             if (distance < 4)
             {
                 var mainMenu = new NativeMenu("Catalogue", "Bienvenue sur le catalogue")
                 {
-                    TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                     UseMouse = false,
                     HeldTime = 100
                 };
@@ -227,7 +227,6 @@ namespace Core.Client
                     var className = GetVehicleClassName(vehicleClass);
                     var classMenu = new NativeMenu(className, className)
                     {
-                        TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                         UseMouse = false
                     }; ;
                     mainMenu.AddSubMenu(classMenu);

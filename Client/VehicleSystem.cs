@@ -93,7 +93,6 @@ namespace Core.Client
             string plate = GetVehicleNumberPlateText(closestVehicle.Handle);
             var menu = new NativeMenu($"{plate}", "Coffre de la voiture")
             {
-                TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                 UseMouse = false
             };
             
@@ -108,14 +107,12 @@ namespace Core.Client
                         menu.Visible = true;
                         var pick = new NativeMenu("Retirer", "Retirer")
                         {
-                            TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                             UseMouse = false
                         };
                         menu.AddSubMenu(pick);
 
                         var drop = new NativeMenu("Déposer", "Déposer")
                         {
-                            TitleFont = CitizenFX.Core.UI.Font.ChaletLondon,
                             UseMouse = false
                         };
                         menu.AddSubMenu(drop);
