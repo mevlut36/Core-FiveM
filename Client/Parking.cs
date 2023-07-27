@@ -1,4 +1,4 @@
-﻿using CitizenFX.Core;
+using CitizenFX.Core;
 using CitizenFX.Core.Native;
 using LemonUI;
 using LemonUI.Menus;
@@ -327,6 +327,23 @@ namespace Core.Client
         public void OnTick()
         {
             ParkingMenu();
+            var playerPos = Game.PlayerPed.Position;
+            foreach (var entry in parkingDict)
+            {
+                float safeZoneRadius = 30;
+
+                if (World.GetDistance(playerPos, entry.Value[0]) < safeZoneRadius)
+                {
+                    NetworkSetFriendlyFireOption(false);
+                    Game.DisableControlThisFrame(2, Control.SelectWeapon);
+                    Game.PlayerPed.Weapons.Select(WeaponHash.Unarmed, true);
+                    Game.DisableControlThisFrame(2, Control.MeleeAttack1);
+                    Format.SendTextUI("Vous êtes dans une ~g~Safe Zone~s~.");
+                } else
+                {
+                    NetworkSetFriendlyFireOption(true);
+                }
+            }
         }
 
     }
