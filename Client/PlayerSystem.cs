@@ -7,6 +7,7 @@ using System.Linq;
 
 using static CitizenFX.Core.Native.API;
 using Newtonsoft.Json;
+using Core.Shared;
 
 namespace Core.Client
 {
@@ -364,6 +365,7 @@ namespace Core.Client
             SetPedHeadOverlayColor(ped, 1, 1, Skin.BeardColor, Skin.BeardColor);
             SetPedHeadOverlay(ped, 2, Skin.Eyebrow, 10 * 0.1f);
             SetPedHeadOverlayColor(ped, 1, 1, 1, 1);
+            SetPedHeadOverlayColor(ped, 2, 1, Skin.EyebrowOpacity, Skin.EyebrowOpacity);
         }
         public void DressPed(int componentId, int drawableId, int textureId)
         {

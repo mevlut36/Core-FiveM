@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using static CitizenFX.Core.Native.API;
+using Core.Shared;
 
 namespace Core.Client
 {
@@ -46,6 +47,15 @@ namespace Core.Client
             EventHandlers["playerSpawned"] += new Action(OnPlayerConnecting);
             EventHandlers["onClientResourceStart"] += new Action<string>(OnClientStart);
             EventHandlers["core:setHealth"] += new Action<int>(SetHealth);
+            EventHandlers["core:cuffPlayer"] += new Action<bool>(SetCuff);
+            EventHandlers["baseevents:onPlayerKilled"] += new Action<dynamic>(async dyn =>
+            {
+                var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
+                SetEntityInvincible(GetPlayerPed(-1), true);
+                NetworkResurrectLocalPlayer(playerCoords.X, playerCoords.Y, playerCoords.Z, 90, true, false);
+                ClearPedTasksImmediately(GetPlayerPed(-1));
+                await OnPlayerDeath();
+            });
             EventHandlers["baseevents:onPlayerDied"] += new Action<dynamic>(async dyn =>
             {
                 var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
@@ -81,9 +91,9 @@ namespace Core.Client
                 };
                 reportSystem.AddReport(newReport);
             }), false);
+
             Tick += ScenarioSuppressionLoop;
 
-            TriggerServerEvent("core:spawnPnj", "csb_chin_goon", new Vector3(123.5f, -1040.4f, 29));
             var item1 = new LTDItems("Ordinateur", "Idéal pour faire du pentest...", 25000);
             NarcoItems.Add(item1);
 
@@ -92,7 +102,6 @@ namespace Core.Client
 
             var item3 = new LTDItems("Phone", "Excellent téléphone", 1000);
             NarcoItems.Add(item3);
-
         }
 
         private static readonly List<string> SCENARIO_TYPES = new List<string>
@@ -124,60 +133,74 @@ namespace Core.Client
             "RIPLEY", // Regularly spawns on the LSIA airport surface
         };
 
-        List<Vector3> pedList = new List<Vector3>();
-        List<int> pedId = new List<int>();
-
-        [EventHandler("core:spawnPeds")]
-        public async void SpawnPed(string json)
-        {
-            pedList = JsonConvert.DeserializeObject<List<Vector3>>(json);
-
-            foreach (var ped in pedList)
-            {
-                var PedId = await World.CreatePed(PedHash.Malibu01AMM, new Vector3(ped.X, ped.Y, ped.Z));
-                Debug.WriteLine($"Created ped with ID {PedId}");
-                SetEntityInvincible(PedId.Handle, true);
-                SetBlockingOfNonTemporaryEvents(PedId.Handle, true);
-                pedId.Add(PedId.Handle);
-            }
-        }
+        public List<int> PedId = new List<int>();
 
         public bool IsRobbing = false;
+        public DateTime? LastRobbery = null;
+
         public void CheckIfPlayerIsAimingAtPed()
         {
             int playerId = PlayerId();
 
-            foreach (var ped in pedId)
+            foreach (var ped in PedId)
             {
-                if (IsPlayerFreeAimingAtEntity(playerId, ped) && IsRobbing == false)
+                if (IsPlayerFreeAimingAtEntity(playerId, ped))
                 {
+                    if (LastRobbery.HasValue && (DateTime.Now - LastRobbery.Value).TotalHours < 1)
+                    {
+                        Format.SendNotif("~r~Vous ne pouvez pas braquer encore. Attendez un peu.");
+                        return;
+                    }
+
                     IsRobbing = true;
+                    LastRobbery = DateTime.Now;
                     Debug.WriteLine($"Robbing ID {ped}");
                     Format.SendNotif("~r~Braquage en cours...");
-                    TriggerServerEvent("core:robbery");
+                    var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
+                    uint streetNameHash = 0;
+                    uint crossingRoadHash = 0;
+                    GetStreetNameAtCoord(playerCoords.X, playerCoords.Y, playerCoords.Z, ref streetNameHash, ref crossingRoadHash);
+                    string streetName = GetStreetNameFromHashKey(streetNameHash);
+                    TriggerServerEvent("core:robbery", streetName);
                     PlaySoundFrontend(-1, "ROBBERY_MONEY_TOTAL", "HUD_FRONTEND_CUSTOM_SOUNDSET", true);
                 }
             }
-
         }
-
 
         public void SetHealth(int health)
         {
             SetEntityHealth(GetPlayerPed(-1), health);
+            SetEntityInvincible(GetPlayerPed(-1), false);
             IsDead = false;
             SetEntityHealth(GetPlayerPed(-1), 200);
             ClearPedTasksImmediately(GetPlayerPed(-1));
         }
+
+        public async void SetCuff(bool state)
+        {
+            if (state)
+            {
+                RequestAnimDict("mp_arrest_paired");
+                while (!Function.Call<bool>(Hash.HAS_ANIM_DICT_LOADED, "mp_arrest_paired")) await Delay(50);
+                TaskPlayAnim(GetPlayerPed(-1), "mp_arrest_paired", "crook_p2_back_left", 8.0f, -8.0f, 5500, 33, 0, false, false, false);
+            } else
+            {
+                Format.PlayAnimation("mp_prison_break", "handcuffed", 8, (AnimationFlags)48);
+            }
+        }
+
         public void OnClientStart(string text)
         {
             // UpdatePlayer();
         }
         public void OnPlayerConnecting()
         {
-            TriggerServerEvent("core:isPlayerRegistered");
+            TriggerServerEvent("core:getLastPosition");
             NetworkSetFriendlyFireOption(true);
             SetCanAttackFriendly(PlayerPedId(), true, true);
+            LTDShop.CreatePeds();
+            ClothShop.CreatePeds();
+            SpawnDealer();
         }
         public async void DeathAnimation(int time)
         {
@@ -277,8 +300,20 @@ namespace Core.Client
                 SetEntityInvincible(GetPlayerPed(-1), false);
             }
         }
-
-
+        
+        public async void SpawnDealer()
+        {
+            var pedHash = PedHash.Malibu01AMM;
+            RequestModel((uint)pedHash);
+            while (!HasModelLoaded((uint)pedHash))
+            {
+                await Delay(100);
+            }
+            var ped = World.CreatePed(pedHash, new Vector3(123.5f, -1040.4f, 28.2f));
+            FreezeEntityPosition(ped.Result.Handle, true);
+            SetEntityInvincible(ped.Result.Handle, true);
+            SetBlockingOfNonTemporaryEvents(ped.Result.Handle, true);
+        }
         public void NarcoMenu()
         {
             var playerCoords = GetEntityCoords(PlayerPedId(), false);
@@ -317,7 +352,6 @@ namespace Core.Client
                                 PlayerMenu.PlayerInst.Money -= result;
                                 PlayerMenu.PlayerInst.Inventory = JsonConvert.SerializeObject(items);
                                 TriggerServerEvent("core:transaction", result, item.Name, parsedInput, "item");
-                                UpdatePlayer();
                                 menu.Visible = false;
                             }
                             else
@@ -335,6 +369,7 @@ namespace Core.Client
         [Tick]
         public async Task OnTick()
         {
+            var playerPos = Game.PlayerPed.Position;
             Pool.Process();
             for (int i = 0; i <= 15; i++)
             {
@@ -347,7 +382,6 @@ namespace Core.Client
             }
             await PopulationManaged();
             PlayerMenu.F5Menu();
-            PlayerMenu.F6Menu();
             Parking.OnTick();
             ConcessAuto.OnTick();
             Bank.OnTick();
@@ -362,9 +396,9 @@ namespace Core.Client
             {
                 DrawPlayerHealthBar();
             }
-            foreach (var ped in pedList)
+            foreach (var ped in PedId)
             {
-                if (GetEntityCoords(GetPlayerPed(-1), true).DistanceToSquared2D(ped) < 10)
+                if (GetEntityCoords(GetPlayerPed(-1), true).DistanceToSquared2D(GetEntityCoords(ped, true)) < 10)
                 {
                     CheckIfPlayerIsAimingAtPed();
                 }
@@ -381,10 +415,6 @@ namespace Core.Client
         }
         public Player GetLocalPlayer() => this.LocalPlayer;
         public void AddEvent(string key, System.Delegate value) => this.EventHandlers.Add(key, value);
-        public void UpdatePlayer()
-        {
-            TriggerServerEvent("core:requestPlayerData");
-        }
         private void DrawPlayerHealthBar()
         {
             float health = Game.PlayerPed.Health;
@@ -400,5 +430,7 @@ namespace Core.Client
         {
             TriggerServerEvent("core:jail", playerId, reason, time);
         }
+
+
     }
 }

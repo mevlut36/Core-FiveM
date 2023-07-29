@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static CitizenFX.Core.Native.API;
+using Core.Shared;
 
 namespace Core.Client
 {
@@ -118,6 +119,8 @@ namespace Core.Client
                         menu.AddSubMenu(drop);
                         Pool.Add(pick);
                         Pool.Add(drop);
+
+                        List<BootInfo> bootsToRemove = new List<BootInfo>();
                         foreach (VehicleInfo info in Client.vehicles)
                         {
                             if (info.Plate == plate)
@@ -139,31 +142,18 @@ namespace Core.Client
                                                 boot.Quantity -= parsedInput;
                                                 if (boot.Quantity <= 0)
                                                 {
-                                                    info.Boot.Remove(boot);
+                                                    bootsToRemove.Add(boot);
                                                     pick.Remove(item);
                                                 }
                                                 BaseScript.TriggerServerEvent("core:requestPlayerData");
                                             }
                                             pick.Visible = false;
                                         };
-                                    } else if (boot.Type == "weapon")
-                                    {
-                                        var item = new NativeItem($"{boot.Item}");
-                                        pick.Add(item);
-                                        item.Activated += (sender, e) =>
-                                        {
-                                            BaseScript.TriggerServerEvent("core:addItem", boot.Item, 1);
-                                            BaseScript.TriggerServerEvent("core:removeItemFromBoot", plate, boot.Item, 1);
-                                            if (boot.Quantity <= 0)
-                                            {
-                                                info.Boot.Remove(boot);
-                                                pick.Remove(item);
-                                            }
-                                            BaseScript.TriggerServerEvent("core:requestPlayerData");
-                                            BaseScript.TriggerServerEvent("core:getVehicleInfo");
-                                            pick.Visible = false;
-                                        };
                                     }
+                                }
+                                foreach (BootInfo boot in bootsToRemove)
+                                {
+                                    info.Boot.Remove(boot);
                                 }
 
                                 var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerMenu.PlayerInst.Inventory);

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using static CitizenFX.Core.Native.API;
+using Core.Shared;
 
 namespace Core.Client
 {

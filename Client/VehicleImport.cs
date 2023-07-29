@@ -10,9 +10,6 @@ namespace Core.Client
         [Display("rx7fd", "Mazda RX-7 [~d~Initial ~r~D~s~ Edition]", 2000)]
         MAZDARX7,
 
-        [Display("cls63amg", "Mercedes CLS 350 AMG", 2500)]
-        CLS63AMG,
-
         [Display("c6320", "Mercedes C 63 AMG S 2020", 2500)]
         C63S,
 
@@ -35,6 +32,9 @@ namespace Core.Client
 
         [Display("Corvettezr1", "Chevrolet Corvette ZR1 2019", 3000)]
         CorvetteZR1,
+
+        [Display("e-tron", "Audi E-Tron", 2500)]
+        ETRON,
 
         [Display("teslapd", "Tesla Model PD", 2000)]
         TeslaPD

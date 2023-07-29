@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static CitizenFX.Core.Native.API;
+using Core.Shared;
 
 namespace Core.Client
 {

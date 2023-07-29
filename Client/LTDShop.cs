@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static CitizenFX.Core.Native.API;
+using Core.Shared;
 
 namespace Core.Client
 {
@@ -39,57 +40,59 @@ namespace Core.Client
             LTDItems.Add(item3);
 
             // LTD LIST
-            LTDShopInfo ltd0 = new LTDShopInfo("Cube Place", new Vector3(190.1f, -889.8f, 30.6f), new Vector3(188.4f, -889.3f, 30.6f), new Vector3(187.6f, -899.5f, 30.6f));
+            LTDShopInfo ltd0 = new LTDShopInfo("Cube Place", new Vector3(190.1f, -889.8f, 29.8f), new Vector3(188.4f, -889.3f, 29.8f), new Vector3(187.6f, -899.5f, 30.6f));
             LTDShops.Add(ltd0);
             
-            LTDShopInfo ltd1 = new LTDShopInfo("Strawberry", new Vector3(26.2f, -1346.9f, 29.3f), new Vector3(24.3f, -1346.6f, 29.3f), new Vector3(33.1f, -1347.9f, 29.3f));
+            LTDShopInfo ltd1 = new LTDShopInfo("Strawberry", new Vector3(26.2f, -1346.9f, 28.5f), new Vector3(24.3f, -1346.6f, 28.5f), new Vector3(33.1f, -1347.9f, 29.3f));
             LTDShops.Add(ltd1);
 
-            LTDShopInfo ltd2 = new LTDShopInfo("Davis", new Vector3(-48, -1756.8f, 29.3f), new Vector3(-46.4f, -1758.1f, 29.4f), new Vector3(-56.7f, -1752.3f, 29.3f));
+            LTDShopInfo ltd2 = new LTDShopInfo("Davis", new Vector3(-48, -1756.8f, 28.5f), new Vector3(-46.4f, -1758.1f, 28.6f), new Vector3(-56.7f, -1752.3f, 29.3f));
             LTDShops.Add(ltd2);
 
-            LTDShopInfo ltd3 = new LTDShopInfo("Chumash", new Vector3(-3243.2f, 1001.8f, 12.7f), new Vector3(-3243.2f, 999.9f, 12.7f), new Vector3(-3240.9f, 1008.7f, 12.8f));
+            LTDShopInfo ltd3 = new LTDShopInfo("Chumash", new Vector3(-3243.2f, 1001.8f, 11.9f), new Vector3(-3243.2f, 999.9f, 11.9f), new Vector3(-3240.9f, 1008.7f, 12.8f));
             LTDShops.Add(ltd3);
 
-            LTDShopInfo ltd4 = new LTDShopInfo("Banham Canyon", new Vector3(-3040.9f, 585.5f, 7.9f), new Vector3(-3040.9f, 583.9f, 7.9f), new Vector3(-3040.9f, 592.9f, 7.9f));
+            LTDShopInfo ltd4 = new LTDShopInfo("Banham Canyon", new Vector3(-3040.9f, 585.5f, 7.1f), new Vector3(-3040.9f, 583.9f, 7.1f), new Vector3(-3040.9f, 592.9f, 7.9f));
             LTDShops.Add(ltd4);
 
-            LTDShopInfo ltd5 = new LTDShopInfo("Banham Canyon", new Vector3(-2968.3f, 390.3f, 15), new Vector3(-2966.1f, 390.3f, 15), Vector3.Zero);
+            LTDShopInfo ltd5 = new LTDShopInfo("Banham Canyon", new Vector3(-2968.3f, 390.3f, 14.2f), new Vector3(-2966.1f, 390.3f, 14.2f), Vector3.Zero);
             LTDShops.Add(ltd5);
 
-            LTDShopInfo ltd6 = new LTDShopInfo("Richman Glen", new Vector3(-1820.7f, 792.6f, 138.1f), new Vector3(-1819.2f, 792.6f, 138.1f), new Vector3(-1827.1f, 785.4f, 138.2f));
+            LTDShopInfo ltd6 = new LTDShopInfo("Richman Glen", new Vector3(-1820.7f, 792.6f, 137.3f), new Vector3(-1819.2f, 792.6f, 137.3f), new Vector3(-1827.1f, 785.4f, 138.2f));
             LTDShops.Add(ltd6);
 
-            LTDShopInfo ltd7 = new LTDShopInfo("Morningwood", new Vector3(-1487.2f, -379.4f, 40.1f), new Vector3(-1485.6f, -378.1f, 40f), Vector3.Zero);
+            LTDShopInfo ltd7 = new LTDShopInfo("Morningwood", new Vector3(-1487.2f, -379.4f, 39.3f), new Vector3(-1485.6f, -378.1f, 39.2f), Vector3.Zero);
             LTDShops.Add(ltd7);
             
-            LTDShopInfo ltd8 = new LTDShopInfo("Monts Tataviam", new Vector3(2555.6f, 382.5f, 108.6f), new Vector3(2555.6f, 380.8f, 108.6f), new Vector3(2558.1f, 389.3f, 108.6f));
+            LTDShopInfo ltd8 = new LTDShopInfo("Monts Tataviam", new Vector3(2555.6f, 382.5f, 107.8f), new Vector3(2555.6f, 380.8f, 107.8f), new Vector3(2558.1f, 389.3f, 108.6f));
             LTDShops.Add(ltd8);
             
-            LTDShopInfo ltd9 = new LTDShopInfo("Sandy Shores", new Vector3(1392.3f, 3604.4f, 34.9f), new Vector3(1392.3f, 3606.4f, 34.9f), Vector3.Zero);
+            LTDShopInfo ltd9 = new LTDShopInfo("Sandy Shores", new Vector3(1392.3f, 3604.4f, 33.1f), new Vector3(1392.3f, 3606.4f, 34.1f), Vector3.Zero);
             LTDShops.Add(ltd9);
 
-            LTDShopInfo ltd10 = new LTDShopInfo("Grapeseed", new Vector3(1698.1f, 4924.8f, 42), new Vector3(1696.9f, 4923.1f, 42), new Vector3(1702.7f, 4933.1f, 42));
+            LTDShopInfo ltd10 = new LTDShopInfo("Grapeseed", new Vector3(1698.1f, 4924.8f, 41.2f), new Vector3(1696.9f, 4923.1f, 41.2f), new Vector3(1702.7f, 4933.1f, 42));
             LTDShops.Add(ltd10);
             
-            LTDShopInfo ltd11 = new LTDShopInfo("Mirror Park", new Vector3(1163.4f, -323.9f, 69.2f), new Vector3(1165.2f, -323.6f, 69.2f), new Vector3(1154.1f, -326.6f, 69.2f));
+            LTDShopInfo ltd11 = new LTDShopInfo("Mirror Park", new Vector3(1163.4f, -323.9f, 68.6f), new Vector3(1165.2f, -323.6f, 68.4f), new Vector3(1154.1f, -326.6f, 69.2f));
             LTDShops.Add(ltd11);
             
-            LTDShopInfo ltd12 = new LTDShopInfo("Vinewood", new Vector3(374.1f, 325.9f, 103.5f), new Vector3(372.2f, 326.5f, 103.5f), new Vector3(380.9f, 323.6f, 103.5f));
+            LTDShopInfo ltd12 = new LTDShopInfo("Vinewood", new Vector3(374.1f, 325.9f, 102.7f), new Vector3(372.2f, 326.5f, 102.7f), new Vector3(380.9f, 323.6f, 103.5f));
             LTDShops.Add(ltd12);
             
-            LTDShopInfo ltd13 = new LTDShopInfo("Vespucci", new Vector3(-1223.5f, -907.1f, 12.3f), new Vector3(-1222.2f, -908.8f, 12.3f), Vector3.Zero);
+            LTDShopInfo ltd13 = new LTDShopInfo("Vespucci", new Vector3(-1223.5f, -907.1f, 11.7f), new Vector3(-1222.2f, -908.8f, 11.6f), Vector3.Zero);
             LTDShops.Add(ltd13);
             
-            LTDShopInfo ltd14 = new LTDShopInfo("Murrieta Heights", new Vector3(1136.1f, -981.7f, 46.4f), new Vector3(1133.6f, -981.7f, 46.4f), Vector3.Zero);
+            LTDShopInfo ltd14 = new LTDShopInfo("Murrieta Heights", new Vector3(1136.1f, -981.7f, 45.6f), new Vector3(1133.6f, -981.7f, 45.6f), Vector3.Zero);
             LTDShops.Add(ltd14);
             
-            LTDShopInfo ltd15 = new LTDShopInfo("Harmony", new Vector3(547.4f, 2671.3f, 42.1f), new Vector3(549.2f, 2670.9f, 42.1f), new Vector3(540.2f, 2670.8f, 42.1f));
+            LTDShopInfo ltd15 = new LTDShopInfo("Harmony", new Vector3(547.4f, 2671.3f, 41.3f), new Vector3(549.2f, 2670.9f, 41.3f), new Vector3(540.2f, 2670.8f, 42.1f));
             LTDShops.Add(ltd15);
             
-            LTDShopInfo ltd16 = new LTDShopInfo("Mont Chiliad", new Vector3(1729.0f, 6414.4f, 35), new Vector3(1727.6f, 6415.3f, 35), new Vector3(1735.3f, 6411, 35));
+            LTDShopInfo ltd16 = new LTDShopInfo("Mont Chiliad", new Vector3(1729.0f, 6414.4f, 34.2f), new Vector3(1727.6f, 6415.3f, 34.2f), new Vector3(1735.3f, 6411, 35));
             LTDShops.Add(ltd16);
-
+        }
+        public async void CreatePeds()
+        {
             foreach (var ltd in LTDShops)
             {
                 Blip myBlip = World.CreateBlip(ltd.Checkout);
@@ -97,6 +100,17 @@ namespace Core.Client
                 myBlip.Name = "Magasin";
                 myBlip.Color = BlipColor.Green;
                 myBlip.IsShortRange = true;
+                var pedHash = PedHash.Malibu01AMM;
+                RequestModel((uint)pedHash);
+                while (!HasModelLoaded((uint)pedHash))
+                {
+                    await BaseScript.Delay(100);
+                }
+                var ped = World.CreatePed(pedHash, ltd.PNJCoords);
+                FreezeEntityPosition(ped.Result.Handle, true);
+                SetEntityInvincible(ped.Result.Handle, true);
+                SetBlockingOfNonTemporaryEvents(ped.Result.Handle, true);
+                Client.PedId.Add(ped.Result.Handle);
             }
         }
 
@@ -143,7 +157,6 @@ namespace Core.Client
                                     PlayerMenu.PlayerInst.Money -= result;
                                     PlayerMenu.PlayerInst.Inventory = JsonConvert.SerializeObject(items);
                                     BaseScript.TriggerServerEvent("core:transaction", result, item.Name, parsedInput, "item");
-                                    Client.UpdatePlayer();
                                     menu.Visible = false;
                                 }
                                 else
@@ -170,9 +183,6 @@ namespace Core.Client
                 if (distance < 4)
                 {
                     Format.SetMarker(ltd.ATM, MarkerType.HorizontalCircleFat);
-                }
-                if (distance < 1)
-                {
                     Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir");
 
                     if (IsControlPressed(0, 38))

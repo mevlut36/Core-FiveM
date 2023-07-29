@@ -3,6 +3,7 @@ using CitizenFX.Core.Native;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using static CitizenFX.Core.Native.API;
+using Core.Shared;
 
 namespace Core.Client
 {
@@ -126,12 +127,28 @@ namespace Core.Client
             World.DrawMarker(markerType, position, Vector3.Zero, Vector3.Zero, new Vector3(1, 1, 1), System.Drawing.Color.FromArgb(255, 130, 0), true);
         }
 
-        public async void PlayAnimation(string animDict, string animName, int duration)
+        public async void PlayAnimation(string animDict, string animName, float speed, AnimationFlags flags)
         {
             Function.Call(Hash.REQUEST_ANIM_DICT, animDict);
             while (!Function.Call<bool>(Hash.HAS_ANIM_DICT_LOADED, animDict)) await BaseScript.Delay(50);
-            Game.PlayerPed.Task.ClearAllImmediately();
-            Game.PlayerPed.Task.PlayAnimation(animDict, animName, -1, duration, 50);
+            Game.PlayerPed.Task.PlayAnimation(animDict, animName, speed, -1, flags);
+        }
+
+        public async Task AddPropToPlayer(string prop1, int bone, float off1, float off2, float off3, float rot1, float rot2, float rot3, int duration)
+        {
+            int player = PlayerPedId();
+            Vector3 playerCoords = GetEntityCoords(player, true);
+
+            RequestModel((uint)GetHashKey(prop1));
+
+            int prop = CreateObject(GetHashKey(prop1), playerCoords.X, playerCoords.Y, playerCoords.Z + 0.2f, true, true, true);
+            AttachEntityToEntity(prop, player, GetPedBoneIndex(player, bone), off1, off2, off3, rot1, rot2, rot3, true, true, false, true, 1, true);
+
+            await BaseScript.Delay(duration);
+
+            DeleteEntity(ref prop);
+
+            SetModelAsNoLongerNeeded((uint)GetHashKey(prop1));
         }
 
         public static async Task<string> GetUserInput(string windowTitle, string defaultText, int maxInputLength)

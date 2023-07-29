@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static CitizenFX.Core.Native.API;
+using Core.Shared;
 
 namespace Core.Client
 {
@@ -55,6 +56,7 @@ namespace Core.Client
                 myBlip.Color = BlipColor.Green;
                 myBlip.Name = "Banque";
                 myBlip.IsShortRange = true;
+
             }
 
         }
@@ -70,9 +72,6 @@ namespace Core.Client
                 if (distance < 4)
                 {
                     Format.SetMarker(bank.Checkout, MarkerType.HorizontalCircleFat);
-                }
-                if (distance < 1)
-                {
                     Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir");
 
                     if (IsControlPressed(0, 38))
@@ -160,53 +159,8 @@ namespace Core.Client
                         Pool.Add(menu);
                         menu.Visible = true;
                         menu.UseMouse = false;
-                        var beginRobbery = new NativeMenu("Braquage", "Démarrer le braquage");
-                        
-                        Pool.Add(beginRobbery);
-                        menu.AddSubMenu(beginRobbery);
-                        beginRobbery.UseMouse = false;
-                        var playersList = new NativeMenu("Participants", "Sélectionner les participants");
-                        Pool.Add(playersList);
-                        beginRobbery.AddSubMenu(playersList);
-                        playersList.UseMouse = false;
-                        var playerTarget = World.GetClosest(playerCoords, World.GetAllPeds());
-                        var listBefore = new List<int>();
-
-                        var addPlayer = new NativeItem("Ajouter");
-                        playersList.Add(addPlayer);
-
-                        addPlayer.Activated += (sender, e) =>
-                        {
-                            if (GetDistanceBetweenCoords(playerTarget.Position.X, playerTarget.Position.Y, playerTarget.Position.Z, playerCoords.X, playerCoords.Y, playerCoords.Z, true) < 10)
-                            {
-                                listBefore.Add(playerTarget.NetworkId);
-                                Format.SendNotif($"Joueur N°{playerTarget.NetworkId} ajouté au braquage");
-                            }
-                        };
-                        
-                        var submit = new NativeItem("Enregistrer");
-                        playersList.Add(submit);
-
-                        NativeItem playerItem = null;
-                        submit.Activated += async (sender, e) =>
-                        {
-                            var json = JsonConvert.SerializeObject(listBefore);
-                            BaseScript.TriggerServerEvent("core:getPlayersRobbery", json);
-                            await BaseScript.Delay(5000);
-                            Debug.WriteLine($"count {PlayersRobbery.Count}");
-                            Debug.WriteLine($"json {json}");
-
-                            foreach (var player in PlayersRobbery)
-                            {
-                                Debug.WriteLine($"Joueur: {player.Lastname}");
-                                playerItem = new NativeItem($"{player.Firstname} {player.Lastname}");
-                                playersList.Add(playerItem);
-                            }
-                        };
-
                         var robbery = new NativeItem("Démarrer le ~r~braquage", "<b>Outils nécessaires:</b> \n- Ordinateur\n- Perceuse");
                         menu.Add(robbery);
-
                         robbery.Activated += async (sender, e) =>
                         {
                             var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerMenu.PlayerInst.Inventory);
@@ -217,46 +171,27 @@ namespace Core.Client
 
                             if (pc.Quantity > 0 && drill.Quantity > 0)
                             {
-                                Format.PlayAnimation("anim@heists@fleeca_bank@drilling", "drill_straight_start", 10000);
-                                await AddPropToPlayer("hei_prop_heist_drill", 28422, 0, 0, 0, 0, 0, 0, 10000);
+                                Format.PlayAnimation("anim@heists@fleeca_bank@drilling", "drill_straight_start", 8, (AnimationFlags)49);
+                                await Format.AddPropToPlayer("hei_prop_heist_drill", 28422, 0, 0, 0, 0, 0, 0, 10000);
                                 PlaySoundFrontend(-1, "Drill_Pin_Break", "DLC_HEIST_FLEECA_SOUNDSET", true);
-                                pc.Quantity -= 1;
-                                drill.Quantity -= 1;
-
-                                BaseScript.TriggerServerEvent("core:removeItem", pc.Item);
-                                BaseScript.TriggerServerEvent("core:removeItem", drill.Item);
-                                await BaseScript.Delay(5000);
-
-                                BaseScript.TriggerServerEvent("giveMoney", 200000);
+                                Format.SendNotif("~r~Braquage en cours...");
+                                uint streetNameHash = 0;
+                                uint crossingRoadHash = 0;
+                                GetStreetNameAtCoord(playerCoords.X, playerCoords.Y, playerCoords.Z, ref streetNameHash, ref crossingRoadHash);
+                                string streetName = GetStreetNameFromHashKey(streetNameHash);
+                                BaseScript.TriggerServerEvent("core:bankRobbery", streetName);
                             } else
                             {
                                 Format.SendNotif("Vous n'avez pas les outils nécessaires");
                             }
-                            
+                            menu.Visible = false;
+                            Pool.Remove(menu);
                         };
                     }
                 }
             }
 
         }
-
-        public async Task AddPropToPlayer(string prop1, int bone, float off1, float off2, float off3, float rot1, float rot2, float rot3, int duration)
-        {
-            int player = PlayerPedId();
-            Vector3 playerCoords = GetEntityCoords(player, true);
-
-            RequestModel((uint)GetHashKey(prop1));
-
-            int prop = CreateObject(GetHashKey(prop1), playerCoords.X, playerCoords.Y, playerCoords.Z + 0.2f, true, true, true);
-            AttachEntityToEntity(prop, player, GetPedBoneIndex(player, bone), off1, off2, off3, rot1, rot2, rot3, true, true, false, true, 1, true);
-
-            await BaseScript.Delay(duration);
-
-            DeleteEntity(ref prop);
-
-            SetModelAsNoLongerNeeded((uint)GetHashKey(prop1));
-        }
-
 
         public void OnTick()
         {

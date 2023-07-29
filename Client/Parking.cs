@@ -1,11 +1,11 @@
-using CitizenFX.Core;
+﻿using CitizenFX.Core;
 using CitizenFX.Core.Native;
 using LemonUI;
 using LemonUI.Menus;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-
+using Core.Shared;
 using static CitizenFX.Core.Native.API;
 
 namespace Core.Client

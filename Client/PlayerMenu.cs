@@ -10,6 +10,7 @@ using LemonUI.Menus;
 using Mono.CSharp;
 using Newtonsoft.Json;
 using static CitizenFX.Core.Native.API;
+using Core.Shared;
 
 namespace Core.Client
 {
@@ -33,17 +34,8 @@ namespace Core.Client
 
         public PlayerInstance PlayerInst = new PlayerInstance
         {
-            Id = 0,
-            Firstname = "",
-            Lastname = "",
-            Rank = "",
-            Bitcoin = 0,
-            Birth = "",
-            Clothes = "",
-            ClothesList = "",
-            Money = 0,
-            Bills = "",
-            Inventory = ""
+            Inventory = "",
+            Money = 0
         };
 
         public void F5Menu()
@@ -160,22 +152,8 @@ namespace Core.Client
                     var showNameState = false;
                     showName.Activated += (sender, e) =>
                     {
-                        for (int i = 0; i < Client.PlayersInstList.Count; i++)
-                        {
-                            var playerInst = Client.PlayersInstList[i];
-                            var handle = Client.PlayersHandle[i];
-                            showNameState = !showNameState;
-                            var targetPlayer = GetPlayerPed(GetPlayerFromServerId(int.Parse(handle)));
-                            int gamerTagID = CreateMpGamerTag(targetPlayer, $"[{handle}] {playerInst.Firstname} {playerInst.Lastname}", true, false, "test", 1);
-                            if (showNameState)
-                            {
-                                SetMpGamerTagVisibility(gamerTagID, 0, true);
-                            }
-                            else
-                            {
-                                SetMpGamerTagVisibility(gamerTagID, 0, false);
-                            }
-                        }
+                        showNameState = !showNameState;
+                        TogglePlayerNames(showNameState);
                     };
 
                     var noClip = new NativeCheckboxItem("NoClip", false);
@@ -577,6 +555,25 @@ namespace Core.Client
 
         }
 
+        public void TogglePlayerNames(bool showNames)
+        {
+            var gamerTags = new List<int>();
+            for (int i = 0; i < Client.PlayersInstList.Count; i++)
+            {
+                var playerInst = Client.PlayersInstList[i];
+                var handle = Client.PlayersHandle[i];
+                var targetPlayer = GetPlayerPed(GetPlayerFromServerId(int.Parse(handle)));
+
+                if (i >= gamerTags.Count)
+                {
+                    int gamerTagID = CreateMpGamerTag(targetPlayer, $"[{handle}] {playerInst.Firstname} {playerInst.Lastname}", true, false, "test", 1);
+                    gamerTags.Add(gamerTagID);
+                }
+
+                SetMpGamerTagVisibility(gamerTags[i], 0, showNames);
+            }
+        }
+
         private void OnReceivePlayers(string jsonInst, string jsonHandles)
         {
             var playersInst = JsonConvert.DeserializeObject<List<PlayerInstance>>(jsonInst);
@@ -601,24 +598,41 @@ namespace Core.Client
                 switch(item)
                 {
                     case "Pain":
-                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 3000);
+                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)49);
                         SetEntityHealth(GetPlayerPed(-1), GetEntityHealth(GetPlayerPed(-1))+10);
+                        await Format.AddPropToPlayer("prop_sandwich_01", 28422, 0, 0, 0, 0, 0, 0, 3000);
                         break;
                     case "Sandwich":
-                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 3000);
+                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)49);
                         SetEntityHealth(GetPlayerPed(-1), GetEntityHealth(GetPlayerPed(-1)) + 30);
+                        await Format.AddPropToPlayer("prop_sandwich_01", 28422, 0, 0, 0, 0, 0, 0, 3000);
+                        break;
+                    case "Burger":
+                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)49);
+                        SetEntityHealth(GetPlayerPed(-1), GetEntityHealth(GetPlayerPed(-1)) + 30);
+                        await Format.AddPropToPlayer("prop_cs_burger_01", 28422, 0, 0, 0, 0, 0, 0, 3000);
                         break;
                     case "Eau":
-                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 3000);
+                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)49);
+                        await Format.AddPropToPlayer("prop_water_bottle", 28422, 0, 0, 0, 0, 0, 0, 3000);
                         break;
                     case "Coca Cola":
-                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 3000);
+                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)49);
+                        await Format.AddPropToPlayer("prop_ecola_can", 28422, 0, 0, 0, 0, 0, 0, 3000);
                         break;
                     case "Outil de crochetage":
-                        Format.PlayAnimation("anim@heists@humane_labs@emp@hack_door", "hack_intro", 10000);
+                        Format.PlayAnimation("anim@heists@humane_labs@emp@hack_door", "hack_intro", 8, (AnimationFlags)49);
                         break;
                     case "Menotte":
-                        BaseScript.TriggerServerEvent("");
+                        var player = GetPlayerPed(-1);
+                        var playerCoords = GetEntityCoords(player, true);
+                        var without_me = World.GetAllPeds().Except(new List<Ped>() { Game.PlayerPed });
+                        var playerTarget = World.GetClosest(playerCoords, without_me.ToArray());
+                        if (GetDistanceBetweenCoords(playerTarget.Position.X, playerTarget.Position.Y, playerTarget.Position.Z, playerCoords.X, playerCoords.Y, playerCoords.Z, true) < 10)
+                        {
+                            AttachEntityToEntity(player, playerTarget.Handle, 11816, -0.1f, 0.45f, 0, 0, 0, 20, false, false, false, false, 20, false);
+                            BaseScript.TriggerServerEvent("core:cuff", GetPlayerServerId(NetworkGetPlayerIndexFromPed(playerTarget.Handle)));
+                        }
                         break;
                     case "Dollars":
                         break;
@@ -636,10 +650,8 @@ namespace Core.Client
                 {
                     if (parsedInput != 0)
                     {
-                        BaseScript.TriggerServerEvent("core:removeItem", item, parsedInput);
-                        BaseScript.TriggerServerEvent("core:requestPlayerData");
-                        BaseScript.TriggerServerEvent("core:addItem", item, parsedInput, GetPlayerServerId(NetworkGetPlayerIndexFromPed(closestPed.Handle)));
-                        BaseScript.TriggerServerEvent("core:requestPlayerData", GetPlayerServerId(NetworkGetPlayerIndexFromPed(closestPed.Handle)));
+                        var closestPedID = GetPlayerServerId(NetworkGetPlayerIndexFromPed(closestPed.Handle));
+                        BaseScript.TriggerServerEvent("core:shareItem", closestPedID, item, parsedInput);
                     }
                 }
             }
@@ -668,6 +680,7 @@ namespace Core.Client
             PlayerInst.Discord = player.Discord;
             PlayerInst.Firstname = player.Firstname;
             PlayerInst.Lastname = player.Lastname;
+            PlayerInst.State = player.State;
             PlayerInst.Rank = player.Rank;
             PlayerInst.Bitcoin = player.Bitcoin;
             PlayerInst.Birth = player.Birth;
