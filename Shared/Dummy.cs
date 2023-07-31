@@ -110,11 +110,12 @@ namespace Core.Shared
         public int Bitcoin { get; set; }
         public string Cars { get; set; }
         public string Birth { get; set; }
-        public string Clothes { get; set; }
+        public List<ClothesInfo> Clothes { get; set; }
         public string ClothesList { get; set; }
         public int Money { get; set; }
         public string Bills { get; set; }
         public string Inventory { get; set; }
+        public Vector3 LastPosition { get; set; }
     }
 
     public class CompanyInstance
