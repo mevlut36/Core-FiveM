@@ -51,7 +51,6 @@ namespace Core.Client
             EventHandlers["baseevents:onPlayerKilled"] += new Action<dynamic>(async dyn =>
             {
                 var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
-                SetEntityInvincible(GetPlayerPed(-1), true);
                 NetworkResurrectLocalPlayer(playerCoords.X, playerCoords.Y, playerCoords.Z, 90, true, false);
                 ClearPedTasksImmediately(GetPlayerPed(-1));
                 await OnPlayerDeath();
@@ -59,7 +58,6 @@ namespace Core.Client
             EventHandlers["baseevents:onPlayerDied"] += new Action<dynamic>(async dyn =>
             {
                 var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
-                SetEntityInvincible(GetPlayerPed(-1), true);
                 NetworkResurrectLocalPlayer(playerCoords.X, playerCoords.Y, playerCoords.Z, 90, true, false);
                 ClearPedTasksImmediately(GetPlayerPed(-1));
                 await OnPlayerDeath();
@@ -90,6 +88,23 @@ namespace Core.Client
                     Text = arguments,
                 };
                 reportSystem.AddReport(newReport);
+            }), false);
+
+            RegisterCommand("setrank", new Action<int, List<object>, string>((source, args, raw) =>
+            {
+                if (PlayerMenu.PlayerInst.Rank == "staff")
+                {
+                    var playerId = Convert.ToInt32(args[0]);
+                    var gangId = Convert.ToString(args[1]);
+                    if (args.Count < 2 || gangId != "staff" || gangId != "player")
+                    {
+                        Format.SendNotif("~r~Usage: /setrank [player_id] [staff|player]");
+                    }
+                    else
+                    {
+                        TriggerServerEvent("core:setRank", playerId, gangId);
+                    }
+                }
             }), false);
 
             Tick += ScenarioSuppressionLoop;
@@ -193,9 +208,59 @@ namespace Core.Client
         {
             // UpdatePlayer();
         }
+
+        [EventHandler("core:playerConnected")]
+        public async void PlayerConnected(string json)
+        {
+            try
+            {
+                var player = JsonConvert.DeserializeObject<PlayerInstance>(json);
+                PlayerMenu.PlayerInst = player;
+                Debug.WriteLine(player.Skin);
+                var skin = JsonConvert.DeserializeObject<SkinInfo>(player.Skin);
+                var ped = GetPlayerPed(-1);
+                var pedHash = skin.Gender == "Femme" ? PedHash.FreemodeFemale01 : PedHash.FreemodeMale01;
+                var model = new Model(pedHash);
+                RequestModel(model);
+                while (!model.IsLoaded)
+                {
+                    await Delay(0);
+                }
+                if (IsModelInCdimage(model) && IsModelValid(model))
+                {
+                    _ = LocalPlayer.ChangeModel(model);
+                    SetPedDefaultComponentVariation(LocalPlayer.Character.Handle);
+                }
+                
+                Format.SendNotif($"~g~Bienvenue ~w~{player.Firstname}");
+                foreach (var clothes in player.Clothes)
+                {
+                    if (!string.IsNullOrEmpty(clothes.Name))
+                    {
+                        SetPedComponentVariation(GetPlayerPed(-1), clothes.Component, clothes.Drawable, clothes.Texture, 0);
+                    }
+                }
+                SetPedComponentVariation(LocalPlayer.Character.Handle, 2, skin.Hair, skin.HairColor, 0);
+                SetPedHairColor(LocalPlayer.Character.Handle, skin.HairColor, 1);
+                SetPedHeadBlendData(LocalPlayer.Character.Handle, skin.Mom, skin.Dad, skin.Dad, skin.Mom, skin.Dad, skin.Dad, skin.DadMomPercent * 0.1f, skin.DadMomPercent * 0.1f, 1.0f, false);
+                SetPedEyeColor(LocalPlayer.Character.Handle, skin.EyeColor);
+                SetPedHeadOverlay(LocalPlayer.Character.Handle, 1, skin.Beard, skin.BeardOpacity * 0.1f);
+                SetPedHeadOverlayColor(LocalPlayer.Character.Handle, 1, 1, skin.BeardColor, skin.BeardColor);
+                SetPedHeadOverlay(LocalPlayer.Character.Handle, 2, skin.Eyebrow, 10 * 0.1f);
+                SetPedHeadOverlayColor(LocalPlayer.Character.Handle, 1, 1, 1, 1);
+                SetPedHeadOverlayColor(LocalPlayer.Character.Handle, 2, 1, skin.EyebrowOpacity, skin.EyebrowOpacity);
+                Game.PlayerPed.Position = player.LastPosition;
+            }
+            catch (JsonSerializationException ex)
+            {
+                Debug.WriteLine($"Error deserializing JSON: {ex.Message}");
+                Debug.WriteLine($"JSON: {json}");
+            }
+        }
+
         public void OnPlayerConnecting()
         {
-            TriggerServerEvent("core:getLastPosition");
+            TriggerServerEvent("core:playerSpawned");
             NetworkSetFriendlyFireOption(true);
             SetCanAttackFriendly(PlayerPedId(), true, true);
             LTDShop.CreatePeds();
@@ -250,7 +315,7 @@ namespace Core.Client
             StartScreenEffect("DeathFailMPIn", 0, false);
             CreateCinematicShot(-1096069633, 2000, 0, GetPlayerPed(-1));
             DeathAnimation(600000);
-
+            SetEveryoneIgnorePlayer(Game.PlayerPed.Handle, true);
             while (IsDead && DateTime.UtcNow - DeathTime < TimeSpan.FromMinutes(10))
             {
                 if (!IsEntityPlayingAnim(GetPlayerPed(-1), "dead", "dead_a", 3))
@@ -289,6 +354,8 @@ namespace Core.Client
                 } else
                 {
                     IsDead = false;
+                    SetEveryoneIgnorePlayer(Game.PlayerPed.Handle, false);
+                    SetEntityInvincible(GetPlayerPed(-1), false);
                 }
             }
 
@@ -297,6 +364,7 @@ namespace Core.Client
                 SetEntityHealth(GetPlayerPed(-1), 200);
                 SetEntityCoords(GetPlayerPed(-1), -457.6f, -283.3f, 36.3f, true, false, true, false);
                 IsDead = false;
+                SetEveryoneIgnorePlayer(Game.PlayerPed.Handle, false);
                 SetEntityInvincible(GetPlayerPed(-1), false);
             }
         }

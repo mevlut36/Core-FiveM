@@ -26,9 +26,6 @@ namespace Core.Client
             Format = caller.Format;
 
             Client.AddEvent("core:createCharacter", new Action(CreateCharacter));
-            Client.AddEvent("core:getSkin", new Action<string>(GetGender));
-            Client.AddEvent("core:getClothes", new Action<string, string>(GetClothes));
-            Client.AddEvent("core:teleportLastPosition", new Action<string>(TeleportLastPosition));
         }
 
         PlayerInstance PlayerRegister = new PlayerInstance
@@ -38,7 +35,7 @@ namespace Core.Client
             Lastname = "",
             Rank = "",
             Birth = "",
-            Clothes = "",
+            Clothes = new List<ClothesInfo>(),
             ClothesList = ""
         };
 
@@ -324,57 +321,6 @@ namespace Core.Client
             {
                 e.Cancel = true;
             };
-        }
-        public async void GetGender(string json)
-        {
-            var gender = JsonConvert.DeserializeObject<SkinInfo>(json);
-            ShutdownLoadingScreen();
-            var pedHash = gender.Gender == "Femme" ? PedHash.FreemodeFemale01 : PedHash.FreemodeMale01;
-            var model = new Model(pedHash);
-            RequestModel(model);
-            while (!model.IsLoaded)
-            {
-                await Delay(0);
-            }
-            if (IsModelInCdimage(model) && IsModelValid(model))
-            {
-                _ = LocalPlayer.ChangeModel(model);
-                SetPedDefaultComponentVariation(LocalPlayer.Character.Handle);
-                TriggerServerEvent("core:setClothes");
-            }
-        }
-        public void GetClothes(string json, string skinJson)
-        {
-            var clothesList = JsonConvert.DeserializeObject<List<ClothesInfo>>(json);
-            var ped = GetPlayerPed(-1);
-            var skin = JsonConvert.DeserializeObject<SkinInfo>(skinJson);
-            Skin = skin;
-            foreach (var clothes in clothesList)
-            {
-                if (!string.IsNullOrEmpty(clothes.Name))
-                {
-                    DressPed(clothes.Component, clothes.Drawable, clothes.Texture);
-                }
-            }
-
-            SetPedComponentVariation(ped, 2, Skin.Hair, Skin.HairColor, 0);
-            SetPedHairColor(ped, Skin.HairColor, 1);
-            SetPedHeadBlendData(ped, Skin.Mom, Skin.Dad, Skin.Dad, Skin.Mom, Skin.Dad, Skin.Dad, Skin.DadMomPercent * 0.1f, Skin.DadMomPercent * 0.1f, 1.0f, false);
-            SetPedEyeColor(ped, Skin.EyeColor);
-            SetPedHeadOverlay(ped, 1, Skin.Beard, Skin.BeardOpacity * 0.1f);
-            SetPedHeadOverlayColor(ped, 1, 1, Skin.BeardColor, Skin.BeardColor);
-            SetPedHeadOverlay(ped, 2, Skin.Eyebrow, 10 * 0.1f);
-            SetPedHeadOverlayColor(ped, 1, 1, 1, 1);
-            SetPedHeadOverlayColor(ped, 2, 1, Skin.EyebrowOpacity, Skin.EyebrowOpacity);
-        }
-        public void DressPed(int componentId, int drawableId, int textureId)
-        {
-            SetPedComponentVariation(GetPlayerPed(-1), componentId, drawableId, textureId, 0);
-        }
-        public void TeleportLastPosition(string json)
-        {
-            var coords = JsonConvert.DeserializeObject<Vector3>(json);
-            Game.PlayerPed.Position = coords;
         }
         public void DressMenu()
         {

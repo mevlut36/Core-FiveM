@@ -20,7 +20,7 @@ namespace Core.Client
         Format Format;
         Parking Parking;
         ObjectPool Pool = new ObjectPool();
-
+        public PlayerMenu PlayerMenu;
         public Vector3 vehicleOut = new Vector3(-47.1f, -1113.3f, 26.44f);
         public Vector3 Vendeur = new Vector3(-41.5f, -1114.1f, 25.6f);
         bool Previsualisation_state = false;
@@ -33,6 +33,7 @@ namespace Core.Client
             Client = caller;
             Format = caller.Format;
             Parking = caller.Parking;
+            PlayerMenu = caller.PlayerMenu;
             Blip myBlip = World.CreateBlip(Vendeur);
             myBlip.Sprite = BlipSprite.PersonalVehicleCar;
             myBlip.Color = BlipColor.Yellow;
@@ -128,13 +129,12 @@ namespace Core.Client
                     BaseScript.TriggerServerEvent("core:getPlayerMoney");
                     await BaseScript.Delay(100);
 
-                    if (Client.PlayerMoney >= cost)
+                    if (PlayerMenu.PlayerInst.Money >= cost)
                     {
                         Format.SendNotif("~g~Vous avez bien acheté le véhicule.\n Il sera livré dans votre garage dans quelques minutes...");
                         BaseScript.TriggerServerEvent("core:transaction", cost);
 
                         Parking.SendVehicleInfo(MyVehicle);
-                        BaseScript.TriggerServerEvent("core:getVehicleInfo");
                         menu.Visible = false;
                     }
                     else
@@ -202,7 +202,7 @@ namespace Core.Client
                 var vehicleNames = System.Enum.GetNames(typeof(VehicleHash));
                 var vehicleClasses = new Dictionary<int, List<string>>
                 {
-                    { 25, new List<string>(){ "twingo" } }
+                    { 25, new List<string>(){ "Twingo" } }
                 };
 
                 foreach (var vehicleName in vehicleNames)

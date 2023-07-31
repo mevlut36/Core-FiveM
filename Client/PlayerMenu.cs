@@ -28,7 +28,6 @@ namespace Core.Client
             Pool = caller.Pool;
             Format = caller.Format;
             Parking = caller.Parking;
-            BaseScript.TriggerServerEvent("core:getPlayersList");
             Client.AddEvent("core:receivePlayers", new Action<string, string>(OnReceivePlayers));
         }
 
@@ -148,7 +147,7 @@ namespace Core.Client
 
                     var showName = new NativeCheckboxItem("Afficher les noms", false);
                     adminMenu.Add(showName);
-
+                    BaseScript.TriggerServerEvent("core:getPlayersList");
                     var showNameState = false;
                     showName.Activated += (sender, e) =>
                     {
@@ -245,308 +244,335 @@ namespace Core.Client
                     };
                 }
 
-                var shopMenu = new NativeMenu("Boutique", "~o~Boutique")
+                if (Client.IsDead == false)
                 {
-                    UseMouse = false
-                };
-                shopMenu.Add(new NativeItem("[V.I.P] Aucun"));
-                shopMenu.Add(new NativeItem($"Bitcoins: {PlayerInst.Bitcoin}"));
-
-                var vip = new NativeMenu("VIP", "VIP")
-                {
-                    UseMouse = false
-                };
-                var vip_1 = new NativeItem("~f~~h~VIP~h~", "", "~g~500~w~ Bitcoins /mois");
-                var vip_2 = new NativeItem("~y~~h~VIP+~h~", "", "~g~700~w~ Bitcoins /mois");
-                var vip_3 = new NativeItem("~q~~h~MVP~h~", "", "~g~1000~w~ Bitcoins /mois");
-                vip.Add(vip_1);
-                vip.Add(vip_2);
-                vip.Add(vip_3);
-                shopMenu.AddSubMenu(vip);
-
-                var carImport = new NativeMenu("Véhicules import", "Véhicules import")
-                {
-                    UseMouse = false
-                };
-                VehicleImport[] values = (VehicleImport[])System.Enum.GetValues(typeof(VehicleImport));
-
-                foreach (VehicleImport vehicle in values)
-                {
-                    DisplayAttribute displayAttribute = Format.GetDisplayAttribute(vehicle);
-                    var vehicleItem = new NativeItem($"{displayAttribute.Name}", "", $"~y~{displayAttribute.Price} BTC");
-                    carImport.Add(vehicleItem);
-                    vehicleItem.Activated += async (sender, args) =>
+                    var shopMenu = new NativeMenu("Boutique", "~o~Boutique")
                     {
-                        if (PlayerInst.Bitcoin >= displayAttribute.Price)
-                        {
-                            BaseScript.TriggerServerEvent("core:bitcoinTransaction", displayAttribute.Price);
-                            PlayerInst.Bitcoin -= displayAttribute.Price;
-                            var model = new Model(GetHashKey(displayAttribute.VehicleName));
-
-                            if (!model.IsInCdImage || !model.IsValid)
-                            {
-                                Debug.WriteLine($"Le modèle du véhicule {model} n'est pas valide ou n'est pas présent dans les fichiers du jeu.");
-                                Format.SendNotif("Erreur: veuillez contacter un admin");
-                                return;
-                            }
-
-                            model.Request();
-
-                            while (!model.IsLoaded)
-                            {
-                                await BaseScript.Delay(0);
-                            }
-
-                            var car = await World.CreateVehicle(model.Hash, GetEntityCoords(GetPlayerPed(-1), true), 90);
-
-                            if (car != null && car.Exists())
-                            {
-                                car.IsPersistent = true;
-                            }
-                            Parking.SendVehicleInfo(car);
-                            BaseScript.TriggerServerEvent("core:getVehicleInfo");
-                        } else
-                        {
-                            Format.SendNotif("Vous n'avez pas assez de ~r~bitcoins~s~...");
-                        }
+                        UseMouse = false
                     };
-                }
-                shopMenu.AddSubMenu(carImport);
+                    shopMenu.Add(new NativeItem("[V.I.P] Aucun"));
+                    shopMenu.Add(new NativeItem($"Bitcoins: {PlayerInst.Bitcoin}"));
 
-                var lootbox = new NativeMenu("Caisse du mois", "Caisse du mois")
-                {
-                    UseMouse = false
-                };
-                shopMenu.AddSubMenu(lootbox);
-
-                Pool.Add(vip);
-                Pool.Add(carImport);
-                Pool.Add(lootbox);
-
-                var menuInfo = new NativeMenu("Informations", "Informations")
-                {
-                    UseMouse = false
-                };
-                menuInfo.Add(new NativeItem($"~g~${PlayerInst.Money}"));
-                menuInfo.Add(new NativeItem($"{PlayerInst.Firstname} {PlayerInst.Lastname}"));
-                menuInfo.Add(new NativeItem($"Né le {PlayerInst.Birth}"));
-
-                var inventoryMenu = new NativeMenu("Inventaire", "Inventaire")
-                {
-                    UseMouse = false
-                };
-                var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerInst.Inventory);
-                if (items != null)
-                {
-                    foreach (var item in items)
+                    var vip = new NativeMenu("VIP", "VIP")
                     {
-                        if (item != null && item.ItemType == "item" && item.Quantity != 0)
-                        {
-                            var invItem = new NativeListItem<string>($"{item.Item} ({item.Quantity})", "", "Utiliser", "Donner");
-                            inventoryMenu.Add(invItem);
-                            invItem.Activated += async (sender, e) =>
-                            {
-                                await ItemActionAsync(invItem.SelectedItem, item.Item);
-                            };
-                        }
-                    }
-                }
+                        UseMouse = false
+                    };
+                    var vip_1 = new NativeItem("~f~~h~VIP~h~", "", "~g~500~w~ Bitcoins /mois");
+                    var vip_2 = new NativeItem("~y~~h~VIP+~h~", "", "~g~700~w~ Bitcoins /mois");
+                    var vip_3 = new NativeItem("~q~~h~MVP~h~", "", "~g~1000~w~ Bitcoins /mois");
+                    vip.Add(vip_1);
+                    vip.Add(vip_2);
+                    vip.Add(vip_3);
+                    shopMenu.AddSubMenu(vip);
 
-                var clothMenu = new NativeMenu("Vêtements", "Vêtements")
-                {
-                    UseMouse = false
-                };
-                var clothesInfo = JsonConvert.DeserializeObject<List<ClothesInfo>>(PlayerInst.ClothesList);
-                if (clothesInfo != null)
-                {
-                    foreach (var clothes in clothesInfo)
+                    var carImport = new NativeMenu("Véhicules import", "Véhicules import")
                     {
-                        if (clothes.Name != null)
-                        {
-                            var clotheItem = new NativeListItem<string>($"{clothes.Name}", "", "Porter", "Enlever");
-                            clothMenu.Add(clotheItem);
-                            clotheItem.Activated += (sender, e) =>
-                            {
-                                if (clotheItem.SelectedItem == "Porter")
-                                {
-                                    SetPedComponentVariation(GetPlayerPed(-1), clothes.Component, clothes.Drawable, clothes.Texture, clothes.Palette);
-                                    var clothesJson = JsonConvert.SerializeObject(new ClothesInfo
-                                    {
-                                        Component = clothes.Component,
-                                        Drawable = clothes.Drawable,
-                                        Texture = clothes.Texture,
-                                        Palette = clothes.Palette
-                                    });
+                        UseMouse = false
+                    };
+                    VehicleImport[] values = (VehicleImport[])System.Enum.GetValues(typeof(VehicleImport));
 
-                                    BaseScript.TriggerServerEvent("core:updateClothe", clothesJson);
-                                }
-                                else
-                                {
-                                    SetPedComponentVariation(GetPlayerPed(-1), clothes.Component, 15, 0, 2);
-                                }
-                            };
-                        }
-                    }
-                }
-
-                var billsMenu = new NativeMenu("Factures", "Factures")
-                {
-                    UseMouse = false
-                };
-                var bills = JsonConvert.DeserializeObject<List<Bills>>(PlayerInst.Bills);
-                if (bills != null)
-                {
-                    foreach (var billsItem in bills)
+                    foreach (VehicleImport vehicle in values)
                     {
-                        var billItem = new NativeItem($"{billsItem.Company}", $"Par {billsItem.Author} le {billsItem.Date}", $"~g~${billsItem.Amount}");
-                        billsMenu.Add(billItem);
-                        billItem.Activated += (sender, e) =>
+                        DisplayAttribute displayAttribute = Format.GetDisplayAttribute(vehicle);
+                        var vehicleItem = new NativeItem($"{displayAttribute.Name}", "", $"~y~{displayAttribute.Price} BTC");
+                        carImport.Add(vehicleItem);
+                        vehicleItem.Activated += async (sender, args) =>
                         {
-                            var selectedBill = bills.FirstOrDefault(b => b.Company == billsItem.Company && b.Amount == billsItem.Amount);
-                            if (selectedBill != null)
+                            if (PlayerInst.Bitcoin >= displayAttribute.Price)
                             {
-                                if (PlayerInst.Money >= billsItem.Amount)
-                                {
-                                    bills.Remove(selectedBill);
-                                    billsMenu.Remove(billItem);
-                                    BaseScript.TriggerServerEvent("core:payBill", billsItem.Company, billsItem.Amount);
-                                }
-                                else
-                                {
-                                    Format.SendNotif("Tu n'as pas assez d'~r~argent...");
-                                }
-                            }
-                        };
-                    }
-                }
+                                BaseScript.TriggerServerEvent("core:bitcoinTransaction", displayAttribute.Price);
+                                PlayerInst.Bitcoin -= displayAttribute.Price;
+                                var model = new Model(GetHashKey(displayAttribute.VehicleName));
 
-                var carMenu = new NativeMenu("Gestion du véhicule", "Gestion du véhicule")
-                {
-                    UseMouse = false
-                };
+                                if (!model.IsInCdImage || !model.IsValid)
+                                {
+                                    Debug.WriteLine($"Le modèle du véhicule {model} n'est pas valide ou n'est pas présent dans les fichiers du jeu.");
+                                    Format.SendNotif("Erreur: veuillez contacter un admin");
+                                    return;
+                                }
 
-                if (IsPedInAnyVehicle(GetPlayerPed(-1), false) == true)
-                {
-                    var engineHealth = (GetVehicleEngineHealth(GetVehiclePedIsIn(PlayerPedId(), false))) * 100.0 / 5000.0 * 5;
-                    var vehicleStatus = new NativeItem($"Etat du moteur: {String.Format("{0:0.##}", engineHealth)}%");
-                    carMenu.Add(vehicleStatus);
-                    var driftMode = new NativeCheckboxItem("Activer le mode Drift");
-                    carMenu.Add(driftMode);
-                    var driftState = false;
-                    driftMode.Activated += (sender, e) =>
-                    {
-                        driftState = !driftState;
-                        if (IsPedInAnyVehicle(GetPlayerPed(-1), false) == true)
-                        {
-                            if (driftState)
-                            {
-                                SetVehicleReduceGrip(GetVehiclePedIsIn(PlayerPedId(), false), true);
+                                model.Request();
+
+                                while (!model.IsLoaded)
+                                {
+                                    await BaseScript.Delay(0);
+                                }
+
+                                var car = await World.CreateVehicle(model.Hash, GetEntityCoords(GetPlayerPed(-1), true), 90);
+
+                                if (car != null && car.Exists())
+                                {
+                                    car.IsPersistent = true;
+                                }
+                                Parking.SendVehicleInfo(car);
+                                BaseScript.TriggerServerEvent("core:getVehicleInfo");
                             }
                             else
                             {
-                                SetVehicleReduceGrip(GetVehiclePedIsIn(PlayerPedId(), false), false);
+                                Format.SendNotif("Vous n'avez pas assez de ~r~bitcoins~s~...");
                             }
-                        }
-                        else
+                        };
+                    }
+                    shopMenu.AddSubMenu(carImport);
+
+                    var lootbox = new NativeMenu("Caisse du mois", "Caisse du mois")
+                    {
+                        UseMouse = false
+                    };
+                    shopMenu.AddSubMenu(lootbox);
+
+                    Pool.Add(vip);
+                    Pool.Add(carImport);
+                    Pool.Add(lootbox);
+
+                    var menuInfo = new NativeMenu("Informations", "Informations")
+                    {
+                        UseMouse = false
+                    };
+                    menuInfo.Add(new NativeItem($"~g~${PlayerInst.Money}"));
+                    menuInfo.Add(new NativeItem($"{PlayerInst.Firstname} {PlayerInst.Lastname}"));
+                    menuInfo.Add(new NativeItem($"Né le {PlayerInst.Birth}"));
+
+                    var cardId = new NativeItem("Montrer sa carte d'identité");
+                    menuInfo.Add(cardId);
+                    cardId.Activated += (sender, e) =>
+                    {
+                        var player = GetPlayerPed(-1);
+                        var playerCoords = GetEntityCoords(player, true);
+                        var without_me = World.GetAllPeds().Except(new List<Ped>() { Game.PlayerPed });
+                        var playerTarget = World.GetClosest(playerCoords, without_me.ToArray());
+                        if (GetDistanceBetweenCoords(playerTarget.Position.X, playerTarget.Position.Y, playerTarget.Position.Z, playerCoords.X, playerCoords.Y, playerCoords.Z, true) < 10)
                         {
-                            Format.SendNotif("~r~Vous n'êtes pas dans un véhicule");
+                            BaseScript.TriggerServerEvent("core:showCardId", GetPlayerServerId(NetworkGetPlayerIndexFromPed(playerTarget.Handle)));
                         }
                     };
-
-                    var doorsItem = new NativeListItem<string>("Ouvrir / Fermer une porte", "", "Avant gauche", "Avant droit", "Arrière gauche", "Arrière droit", "Capot", "Coffre", "Toutes les portes");
-                    var doors = new List<string>() { "Front Left", "Front Right", "Rear Left", "Rear Right", "Hood", "Trunk" };
-                    carMenu.Add(doorsItem);
-
-                    doorsItem.Activated += (sender, e) =>
+                    var cardPPA = new NativeItem("Montrer son PPA");
+                    menuInfo.Add(cardPPA);
+                    cardPPA.Activated += (sender, e) =>
                     {
-                        if (IsPedInAnyVehicle(GetPlayerPed(-1), false) == true)
-                        {
-                            if (GetPedInVehicleSeat(GetVehiclePedIsIn(PlayerPedId(), false), -1) == GetPlayerPed(-1))
-                            {
-                                var index = doorsItem.SelectedIndex;
-                                if (index <= 5)
-                                {
-                                    bool open = GetVehicleDoorAngleRatio(GetVehiclePedIsIn(GetPlayerPed(-1), false), index) > 0.1f ? true : false;
 
-                                    if (open)
+                    };
+
+                    var inventoryMenu = new NativeMenu("Inventaire", "Inventaire")
+                    {
+                        UseMouse = false
+                    };
+                    var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerInst.Inventory);
+                    if (items != null)
+                    {
+                        foreach (var item in items)
+                        {
+                            if (item != null && item.ItemType == "item" && item.Quantity != 0)
+                            {
+                                var invItem = new NativeListItem<string>($"{item.Item} ({item.Quantity})", "", "Utiliser", "Donner");
+                                inventoryMenu.Add(invItem);
+                                invItem.Activated += async (sender, e) =>
+                                {
+                                    await ItemActionAsync(invItem.SelectedItem, item.Item);
+                                };
+                            }
+                        }
+                    }
+
+                    var clothMenu = new NativeMenu("Vêtements", "Vêtements")
+                    {
+                        UseMouse = false
+                    };
+                    var clothesInfo = JsonConvert.DeserializeObject<List<ClothesInfo>>(PlayerInst.ClothesList);
+                    if (clothesInfo != null)
+                    {
+                        foreach (var clothes in clothesInfo)
+                        {
+                            if (clothes.Name != null)
+                            {
+                                var clotheItem = new NativeListItem<string>($"{clothes.Name}", "", "Porter", "Enlever");
+                                clothMenu.Add(clotheItem);
+                                clotheItem.Activated += (sender, e) =>
+                                {
+                                    if (clotheItem.SelectedItem == "Porter")
                                     {
-                                        SetVehicleDoorShut(GetVehiclePedIsIn(GetPlayerPed(-1), false), index, false);
+                                        SetPedComponentVariation(GetPlayerPed(-1), clothes.Component, clothes.Drawable, clothes.Texture, clothes.Palette);
+                                        var clothesJson = JsonConvert.SerializeObject(new ClothesInfo
+                                        {
+                                            Component = clothes.Component,
+                                            Drawable = clothes.Drawable,
+                                            Texture = clothes.Texture,
+                                            Palette = clothes.Palette
+                                        });
+
+                                        BaseScript.TriggerServerEvent("core:updateClothe", clothesJson);
                                     }
                                     else
                                     {
-                                        SetVehicleDoorOpen(GetVehiclePedIsIn(GetPlayerPed(-1), false), index, false, false);
+                                        SetPedComponentVariation(GetPlayerPed(-1), clothes.Component, 15, 0, 2);
                                     }
-                                }
-                                else if (doorsItem.SelectedItem == "Toutes les portes")
-                                {
-                                    var open = false;
-                                    for (var door = 0; door < 5; door++)
-                                    {
-
-                                        open = !open;
-
-                                        if (open)
-                                        {
-                                            SetVehicleDoorsShut(GetVehiclePedIsIn(GetPlayerPed(-1), false), false);
-
-                                        }
-                                        else
-                                        {
-                                            SetVehicleDoorOpen(GetVehiclePedIsIn(GetPlayerPed(-1), false), door, false, false);
-                                        }
-                                    }
-                                }
+                                };
                             }
                         }
-                        else
-                        {
-                            Format.SendNotif("~r~Vous n'êtes pas dans un véhicule");
-                        }
-                    };
-                }
+                    }
 
-                var weaponsMenu = new NativeMenu("Armes", "Armes")
-                {
-                    UseMouse = false
-                };
-
-                if (items != null)
-                {
-                    foreach (var weapon in items)
+                    var billsMenu = new NativeMenu("Factures", "Factures")
                     {
-                        var ammo = 0;
-                        foreach (var item in items)
+                        UseMouse = false
+                    };
+                    var bills = JsonConvert.DeserializeObject<List<Bills>>(PlayerInst.Bills);
+                    if (bills != null)
+                    {
+                        foreach (var billsItem in bills)
                         {
-                            if (item.Item == "Munitions")
+                            var billItem = new NativeItem($"{billsItem.Company}", $"Par {billsItem.Author} le {billsItem.Date}", $"~g~${billsItem.Amount}");
+                            billsMenu.Add(billItem);
+                            billItem.Activated += (sender, e) =>
                             {
-                                ammo = item.Quantity;
-                                break;
-                            }
-                        }
-
-
-                        if (weapon.Item != null && weapon.ItemType == "weapon")
-                        {
-                            var weaponItem = new NativeListItem<string>($"{weapon.Item}", "", "Équiper", "Déséquiper");
-                            weaponsMenu.Add(weaponItem);
-                            weaponItem.Activated += (sender, e) =>
-                            {
-                                if (weaponItem.SelectedItem == "Équiper")
+                                var selectedBill = bills.FirstOrDefault(b => b.Company == billsItem.Company && b.Amount == billsItem.Amount);
+                                if (selectedBill != null)
                                 {
-                                    GiveWeaponToPed(GetPlayerPed(-1), (uint)GetHashKey($"weapon_{weapon.Item}"), 0, false, false);
-                                    SetPedAmmo(GetPlayerPed(-1), (uint)GetHashKey($"weapon_{weapon.Item}"), ammo);
-                                }
-                                else
-                                {
-                                    RemoveWeaponFromPed(GetPlayerPed(-1), (uint)GetHashKey($"weapon_{weapon.Item}"));
+                                    if (PlayerInst.Money >= billsItem.Amount)
+                                    {
+                                        bills.Remove(selectedBill);
+                                        billsMenu.Remove(billItem);
+                                        BaseScript.TriggerServerEvent("core:payBill", billsItem.Company, billsItem.Amount);
+                                    }
+                                    else
+                                    {
+                                        Format.SendNotif("Tu n'as pas assez d'~r~argent...");
+                                    }
                                 }
                             };
                         }
                     }
-                }
 
-                SetSubmenu(MainMenu, shopMenu, menuInfo, inventoryMenu, clothMenu, billsMenu, carMenu, weaponsMenu);
-                SetPool(MainMenu, shopMenu, menuInfo, inventoryMenu, clothMenu, billsMenu, carMenu, weaponsMenu);
+                    var carMenu = new NativeMenu("Gestion du véhicule", "Gestion du véhicule")
+                    {
+                        UseMouse = false
+                    };
+
+                    if (IsPedInAnyVehicle(GetPlayerPed(-1), false) == true)
+                    {
+                        var engineHealth = (GetVehicleEngineHealth(GetVehiclePedIsIn(PlayerPedId(), false))) * 100.0 / 5000.0 * 5;
+                        var vehicleStatus = new NativeItem($"Etat du moteur: {String.Format("{0:0.##}", engineHealth)}%");
+                        carMenu.Add(vehicleStatus);
+                        var driftMode = new NativeCheckboxItem("Activer le mode Drift");
+                        carMenu.Add(driftMode);
+                        var driftState = false;
+                        driftMode.Activated += (sender, e) =>
+                        {
+                            driftState = !driftState;
+                            if (IsPedInAnyVehicle(GetPlayerPed(-1), false) == true)
+                            {
+                                if (driftState)
+                                {
+                                    SetVehicleReduceGrip(GetVehiclePedIsIn(PlayerPedId(), false), true);
+                                }
+                                else
+                                {
+                                    SetVehicleReduceGrip(GetVehiclePedIsIn(PlayerPedId(), false), false);
+                                }
+                            }
+                            else
+                            {
+                                Format.SendNotif("~r~Vous n'êtes pas dans un véhicule");
+                            }
+                        };
+
+                        var doorsItem = new NativeListItem<string>("Ouvrir / Fermer une porte", "", "Avant gauche", "Avant droit", "Arrière gauche", "Arrière droit", "Capot", "Coffre", "Toutes les portes");
+                        var doors = new List<string>() { "Front Left", "Front Right", "Rear Left", "Rear Right", "Hood", "Trunk" };
+                        carMenu.Add(doorsItem);
+
+                        doorsItem.Activated += (sender, e) =>
+                        {
+                            if (IsPedInAnyVehicle(GetPlayerPed(-1), false) == true)
+                            {
+                                if (GetPedInVehicleSeat(GetVehiclePedIsIn(PlayerPedId(), false), -1) == GetPlayerPed(-1))
+                                {
+                                    var index = doorsItem.SelectedIndex;
+                                    if (index <= 5)
+                                    {
+                                        bool open = GetVehicleDoorAngleRatio(GetVehiclePedIsIn(GetPlayerPed(-1), false), index) > 0.1f ? true : false;
+
+                                        if (open)
+                                        {
+                                            SetVehicleDoorShut(GetVehiclePedIsIn(GetPlayerPed(-1), false), index, false);
+                                        }
+                                        else
+                                        {
+                                            SetVehicleDoorOpen(GetVehiclePedIsIn(GetPlayerPed(-1), false), index, false, false);
+                                        }
+                                    }
+                                    else if (doorsItem.SelectedItem == "Toutes les portes")
+                                    {
+                                        var open = false;
+                                        for (var door = 0; door < 5; door++)
+                                        {
+
+                                            open = !open;
+
+                                            if (open)
+                                            {
+                                                SetVehicleDoorsShut(GetVehiclePedIsIn(GetPlayerPed(-1), false), false);
+
+                                            }
+                                            else
+                                            {
+                                                SetVehicleDoorOpen(GetVehiclePedIsIn(GetPlayerPed(-1), false), door, false, false);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                Format.SendNotif("~r~Vous n'êtes pas dans un véhicule");
+                            }
+                        };
+                    }
+
+                    var weaponsMenu = new NativeMenu("Armes", "Armes")
+                    {
+                        UseMouse = false
+                    };
+
+                    if (items != null)
+                    {
+                        foreach (var weapon in items)
+                        {
+                            var ammo = 0;
+                            foreach (var item in items)
+                            {
+                                if (item.Item == "Munitions")
+                                {
+                                    ammo = item.Quantity;
+                                    break;
+                                }
+                            }
+
+
+                            if (weapon.Item != null && weapon.ItemType == "weapon")
+                            {
+                                var weaponItem = new NativeListItem<string>($"{weapon.Item}", "", "Équiper", "Déséquiper");
+                                weaponsMenu.Add(weaponItem);
+                                weaponItem.Activated += (sender, e) =>
+                                {
+                                    if (weaponItem.SelectedItem == "Équiper")
+                                    {
+                                        GiveWeaponToPed(GetPlayerPed(-1), (uint)GetHashKey($"weapon_{weapon.Item}"), 0, false, false);
+                                        SetPedAmmo(GetPlayerPed(-1), (uint)GetHashKey($"weapon_{weapon.Item}"), ammo);
+                                    }
+                                    else
+                                    {
+                                        RemoveWeaponFromPed(GetPlayerPed(-1), (uint)GetHashKey($"weapon_{weapon.Item}"));
+                                    }
+                                };
+                            }
+                        }
+                    }
+
+                    SetSubmenu(MainMenu, shopMenu, menuInfo, inventoryMenu, clothMenu, billsMenu, carMenu, weaponsMenu);
+                    SetPool(MainMenu, shopMenu, menuInfo, inventoryMenu, clothMenu, billsMenu, carMenu, weaponsMenu);
+                } else
+                {
+                    Format.SendNotif("~r~Vous êtes mort...");
+                }
             }
         }
 
@@ -598,30 +624,30 @@ namespace Core.Client
                 switch(item)
                 {
                     case "Pain":
-                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)49);
+                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)50);
                         SetEntityHealth(GetPlayerPed(-1), GetEntityHealth(GetPlayerPed(-1))+10);
                         await Format.AddPropToPlayer("prop_sandwich_01", 28422, 0, 0, 0, 0, 0, 0, 3000);
                         break;
                     case "Sandwich":
-                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)49);
+                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)50);
                         SetEntityHealth(GetPlayerPed(-1), GetEntityHealth(GetPlayerPed(-1)) + 30);
                         await Format.AddPropToPlayer("prop_sandwich_01", 28422, 0, 0, 0, 0, 0, 0, 3000);
                         break;
                     case "Burger":
-                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)49);
+                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)50);
                         SetEntityHealth(GetPlayerPed(-1), GetEntityHealth(GetPlayerPed(-1)) + 30);
                         await Format.AddPropToPlayer("prop_cs_burger_01", 28422, 0, 0, 0, 0, 0, 0, 3000);
                         break;
                     case "Eau":
-                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)49);
+                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)50);
                         await Format.AddPropToPlayer("prop_water_bottle", 28422, 0, 0, 0, 0, 0, 0, 3000);
                         break;
                     case "Coca Cola":
-                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)49);
+                        Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)50);
                         await Format.AddPropToPlayer("prop_ecola_can", 28422, 0, 0, 0, 0, 0, 0, 3000);
                         break;
                     case "Outil de crochetage":
-                        Format.PlayAnimation("anim@heists@humane_labs@emp@hack_door", "hack_intro", 8, (AnimationFlags)49);
+                        Format.PlayAnimation("anim@heists@humane_labs@emp@hack_door", "hack_intro", 8, (AnimationFlags)50);
                         break;
                     case "Menotte":
                         var player = GetPlayerPed(-1);
@@ -681,6 +707,7 @@ namespace Core.Client
             PlayerInst.Firstname = player.Firstname;
             PlayerInst.Lastname = player.Lastname;
             PlayerInst.State = player.State;
+            PlayerInst.Skin = player.Skin;
             PlayerInst.Rank = player.Rank;
             PlayerInst.Bitcoin = player.Bitcoin;
             PlayerInst.Birth = player.Birth;
@@ -689,6 +716,7 @@ namespace Core.Client
             PlayerInst.Money = player.Money;
             PlayerInst.Bills = player.Bills;
             PlayerInst.Inventory = player.Inventory;
+            PlayerInst.LastPosition = player.LastPosition;
         }
 
     }
