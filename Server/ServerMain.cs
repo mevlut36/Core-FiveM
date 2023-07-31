@@ -1,19 +1,16 @@
-using System;
 using CitizenFX.Core;
-using System.Linq;
-using System.Collections.Generic;
-using static CitizenFX.Core.Native.API;
-using Newtonsoft.Json;
-using System.ComponentModel;
-using System.Numerics;
 using Core.Shared;
-using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using static CitizenFX.Core.Native.API;
 
 namespace Core.Server
 {
     public class ServerMain : BaseScript
     {
-        List<CitizenFX.Core.Vector3> PNJ = new List<CitizenFX.Core.Vector3>
+        private List<CitizenFX.Core.Vector3> PNJ = new List<CitizenFX.Core.Vector3>
         {
             new CitizenFX.Core.Vector3(188.4f, -889.3f, 30.6f),
             new CitizenFX.Core.Vector3(24.3f, -1346.6f, 29.3f),
@@ -51,30 +48,47 @@ namespace Core.Server
         public ServerMain()
         {
             Debug.WriteLine("Hi from Core.Server!");
+            EventHandlers["core:playerSpawned"] += new Action<Player>(PlayerConnected);
             EventHandlers["playerDropped"] += new Action<Player>(IsPlayerDisconnecting);
             EventHandlers["core:kick"] += new Action<Player, int, string>(Kick);
         }
 
-        [EventHandler("core:getLastPosition")]
-        public void GetLastPosition([FromSource] Player player)
+        public void PlayerConnected([FromSource] Player player)
         {
             using (var dbContext = new DataContext())
             {
-                var networkId = player.Handle;
-                var playerPed = GetPlayerPed(networkId);
                 var license = player.Identifiers["license"];
                 var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
                 if (existingPlayer != null)
                 {
-                    GetPlayerData(player);
-                    TriggerClientEvent(player, "core:getSkin", existingPlayer.Skin);
-                    TriggerClientEvent(player, "core:sendNotif", $"~g~Bienvenue ~w~{existingPlayer.FirstName}");
-                    TriggerClientEvent(player, "core:teleportLastPosition", existingPlayer.LastPosition);
+                    var playerInstance = new PlayerInstance
+                    {
+                        Id = existingPlayer.Id,
+                        State = existingPlayer.State,
+                        Discord = existingPlayer.Discord,
+                        Skin = existingPlayer.Skin,
+                        Firstname = existingPlayer.FirstName,
+                        Lastname = existingPlayer.LastName,
+                        Rank = existingPlayer.Rank,
+                        Job = existingPlayer.Job,
+                        Organisation = existingPlayer.Organisation,
+                        Bitcoin = existingPlayer.Bitcoin,
+                        Birth = existingPlayer.Birth,
+                        Clothes = JsonConvert.DeserializeObject<List<ClothesInfo>>(existingPlayer.Clothes),
+                        ClothesList = existingPlayer.ClothesList,
+                        Money = existingPlayer.Money,
+                        Bills = existingPlayer.Bills,
+                        LastPosition = JsonConvert.DeserializeObject<Vector3>(existingPlayer.LastPosition),
+                        Inventory = existingPlayer.Inventory
+                    };
+
+                    var json = JsonConvert.SerializeObject(playerInstance);
+                    TriggerClientEvent(player, "core:playerConnected", json);
                 }
                 else
                 {
                     TriggerClientEvent(player, "core:createCharacter");
-                    SetPlayerRoutingBucket(player.Handle, Int32.Parse(networkId));
+                    SetPlayerRoutingBucket(player.Handle, Int32.Parse(player.Handle));
                 }
             }
         }
@@ -108,7 +122,7 @@ namespace Core.Server
                         Organisation = existingPlayer.Organisation,
                         Bitcoin = existingPlayer.Bitcoin,
                         Birth = existingPlayer.Birth,
-                        Clothes = existingPlayer.Clothes,
+                        Clothes = JsonConvert.DeserializeObject<List<ClothesInfo>>(existingPlayer.Clothes),
                         ClothesList = existingPlayer.ClothesList,
                         Money = existingPlayer.Money,
                         Bills = existingPlayer.Bills,
@@ -147,7 +161,6 @@ namespace Core.Server
                 }
             }
         }
-
 
         [EventHandler("core:setClothes")]
         public void SetClothes([FromSource] Player player)
@@ -211,7 +224,8 @@ namespace Core.Server
 
                     GetPlayerData(player);
                     TriggerClientEvent(player, "core:sendNotif", $"Vous avez récupérer ~g~${dollars.Quantity}");
-                } else
+                }
+                else
                 {
                     Debug.WriteLine("Error in core:robbery: Player doesn't exist");
                 }
@@ -325,7 +339,7 @@ namespace Core.Server
                     License = player.Identifiers["license"],
                     Discord = player.Identifiers["discord"],
                     State = JsonConvert.SerializeObject(state),
-                    Skin = data.Skin,
+                    Skin = JsonConvert.SerializeObject(data.Skin),
                     FirstName = data.Firstname,
                     LastName = data.Lastname,
                     Rank = "player",
@@ -456,6 +470,27 @@ namespace Core.Server
             }
         }
 
+        [EventHandler("core:showCardId")]
+        public void ShowCardId([FromSource] Player player, int targetId)
+        {
+            var targetPlayer = Players[targetId];
+            using (var dbContext = new DataContext())
+            {
+                var existingPlayer = dbContext.Player.FirstOrDefault(u => u.License == player.Identifiers["license"]);
+                var existingTarget = dbContext.Player.FirstOrDefault(u => u.License == targetPlayer.Identifiers["license"]);
+
+                if (existingPlayer != null && existingTarget != null)
+                {
+                    TriggerClientEvent(targetPlayer, "core:sendNotif",
+                        $"Prénom: {existingPlayer.FirstName}\n" +
+                        $"Nom: {existingPlayer.LastName}\n" +
+                        $"Né le {existingPlayer.Birth}\n" +
+                        $"Nationalité: Américaine\n" +
+                        $"Genre: {JsonConvert.DeserializeObject<SkinInfo>(existingPlayer.Skin).Gender}");
+                }
+            }
+        }
+
         [EventHandler("core:getPlayerMoney")]
         public void GetPlayerMoney([FromSource] Player player)
         {
@@ -492,7 +527,6 @@ namespace Core.Server
                     {
                         TriggerClientEvent(player, "core:sendNotif", $"~r~Vous n'avez pas assez de Bitcoins.");
                     }
-
                 }
             }
         }
@@ -543,7 +577,6 @@ namespace Core.Server
                     GetPlayerData(player);
                 }
             }
-
         }
 
         [EventHandler("core:bankTransaction")]
@@ -641,7 +674,6 @@ namespace Core.Server
                 }
             }
         }
-
 
         [EventHandler("core:giveMoney")]
         public void GiveMoney([FromSource] Player player, int amount)
@@ -972,12 +1004,10 @@ namespace Core.Server
                         GetPlayerData(player);
                         GetPlayerData(targetPlayer);
                         TriggerClientEvent(player, "core:sendNotif", $"Vous avez donné {quantity} de {item}");
-                        
                     }
                 }
             }
         }
-
 
         [EventHandler("core:buyWeapon")]
         public void BuyWeapon([FromSource] Player player, string item, int cost)
@@ -1009,9 +1039,9 @@ namespace Core.Server
                         existingPlayer.Inventory = updatedInventory;
                         dbContext.SaveChanges();
                         GetPlayerData(player);
-                    } else
+                    }
+                    else
                     {
-
                     }
                 }
             }
@@ -1069,7 +1099,7 @@ namespace Core.Server
                             Organisation = existingPlayer.Organisation,
                             Bitcoin = existingPlayer.Bitcoin,
                             Birth = existingPlayer.Birth,
-                            Clothes = existingPlayer.Clothes,
+                            Clothes = JsonConvert.DeserializeObject<List<ClothesInfo>>(existingPlayer.Clothes),
                             ClothesList = existingPlayer.ClothesList,
                             Money = existingPlayer.Money,
                             Bills = existingPlayer.Bills,
@@ -1083,6 +1113,30 @@ namespace Core.Server
                 var jsonPlayerInstances = JsonConvert.SerializeObject(playersInstances);
                 var jsonPlayersHandle = JsonConvert.SerializeObject(playersHandle);
                 TriggerClientEvent("core:receivePlayers", jsonPlayerInstances, jsonPlayersHandle);
+            }
+        }
+
+        [EventHandler("core:setRank")]
+        public void SetRank([FromSource] Player player, int playerServerId, string rank)
+        {
+            if (player.Identifiers["license"] == "b88815828af00440aae4cc0551617f2de2b49fb4")
+            {
+                Player targetPlayer = Players[playerServerId];
+                using (var dbContext = new DataContext())
+                {
+                    var license = targetPlayer.Identifiers["license"];
+                    var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
+                    if (existingPlayer != null)
+                    {
+                        existingPlayer.Rank = rank;
+                        dbContext.SaveChanges();
+                        GetPlayerData(targetPlayer);
+                    }
+                }
+            }
+            else
+            {
+                TriggerClientEvent("core:sendNotif", "~r~Désolé vous n'êtes pas Mevlut");
             }
         }
 
@@ -1133,6 +1187,7 @@ namespace Core.Server
                 Debug.WriteLine("[Warning] Player not found.");
                 return;
             }
+            SetPlayerInvincible(targetPlayer.Handle, false);
             TriggerClientEvent(targetPlayer, "core:setHealth", value);
         }
 
