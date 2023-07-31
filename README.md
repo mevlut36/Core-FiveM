@@ -15,6 +15,7 @@ This project is a core module for FiveM that handles player spawning and creatio
 - VIP Shop (Can buy vehicle import)
 - Admin menu
 - Discord presence
+- Robbery
 
 ## Contributing
 
