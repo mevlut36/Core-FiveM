@@ -339,7 +339,7 @@ namespace Core.Server
                     License = player.Identifiers["license"],
                     Discord = player.Identifiers["discord"],
                     State = JsonConvert.SerializeObject(state),
-                    Skin = JsonConvert.SerializeObject(data.Skin),
+                    Skin = data.Skin,
                     FirstName = data.Firstname,
                     LastName = data.Lastname,
                     Rank = "player",
@@ -414,10 +414,13 @@ namespace Core.Server
                 var license = player.Identifiers["license"];
                 var json = JsonConvert.SerializeObject(player.Character.Position);
                 var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
-                existingPlayer.LastPosition = json;
-                dbContext.SaveChanges();
+                if (existingPlayer != null)
+                {
+                    existingPlayer.LastPosition = json;
+                    dbContext.SaveChanges();
+                    Debug.WriteLine($"{existingPlayer.FirstName} {existingPlayer.LastName} ({player.Name}) disconnected");
+                }
             }
-            Debug.WriteLine($"{player.Name} disconnected");
         }
 
         [EventHandler("core:sendVehicleInfo")]
@@ -445,9 +448,8 @@ namespace Core.Server
 
                     existingPlayer.Cars = JsonConvert.SerializeObject(cars);
                     dbContext.SaveChanges();
-                    GetPlayerData(player);
                 }
-
+                GetPlayerData(player);
                 TriggerClientEvent(player, "core:sendNotif", "Vos informations ont bien été enregistrées");
             }
         }
@@ -488,19 +490,6 @@ namespace Core.Server
                         $"Nationalité: Américaine\n" +
                         $"Genre: {JsonConvert.DeserializeObject<SkinInfo>(existingPlayer.Skin).Gender}");
                 }
-            }
-        }
-
-        [EventHandler("core:getPlayerMoney")]
-        public void GetPlayerMoney([FromSource] Player player)
-        {
-            var license = player.Identifiers["license"];
-            var networkId = player.Handle;
-            var playerPed = GetPlayerPed(networkId);
-            using (var dbContext = new DataContext())
-            {
-                var existingPlayer = dbContext.Player.FirstOrDefault(u => u.License == license);
-                TriggerClientEvent(player, "core:receivePlayerMoney", existingPlayer.Money);
             }
         }
 
@@ -1091,16 +1080,12 @@ namespace Core.Server
                         {
                             Id = existingPlayer.Id,
                             Discord = existingPlayer.Discord,
-                            Skin = existingPlayer.Skin,
                             Firstname = existingPlayer.FirstName,
                             Lastname = existingPlayer.LastName,
                             Rank = existingPlayer.Rank,
                             Job = existingPlayer.Job,
                             Organisation = existingPlayer.Organisation,
                             Bitcoin = existingPlayer.Bitcoin,
-                            Birth = existingPlayer.Birth,
-                            Clothes = JsonConvert.DeserializeObject<List<ClothesInfo>>(existingPlayer.Clothes),
-                            ClothesList = existingPlayer.ClothesList,
                             Money = existingPlayer.Money,
                             Bills = existingPlayer.Bills,
                             Inventory = existingPlayer.Inventory
@@ -1119,24 +1104,17 @@ namespace Core.Server
         [EventHandler("core:setRank")]
         public void SetRank([FromSource] Player player, int playerServerId, string rank)
         {
-            if (player.Identifiers["license"] == "b88815828af00440aae4cc0551617f2de2b49fb4")
+            Player targetPlayer = Players[playerServerId];
+            using (var dbContext = new DataContext())
             {
-                Player targetPlayer = Players[playerServerId];
-                using (var dbContext = new DataContext())
+                var license = targetPlayer.Identifiers["license"];
+                var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
+                if (existingPlayer != null)
                 {
-                    var license = targetPlayer.Identifiers["license"];
-                    var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
-                    if (existingPlayer != null)
-                    {
-                        existingPlayer.Rank = rank;
-                        dbContext.SaveChanges();
-                        GetPlayerData(targetPlayer);
-                    }
+                    existingPlayer.Rank = rank;
+                    dbContext.SaveChanges();
+                    GetPlayerData(targetPlayer);
                 }
-            }
-            else
-            {
-                TriggerClientEvent("core:sendNotif", "~r~Désolé vous n'êtes pas Mevlut");
             }
         }
 
