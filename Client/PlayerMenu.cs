@@ -28,6 +28,7 @@ namespace Core.Client
             Pool = caller.Pool;
             Format = caller.Format;
             Parking = caller.Parking;
+
             Client.AddEvent("core:receivePlayers", new Action<string, string>(OnReceivePlayers));
         }
 
@@ -41,10 +42,58 @@ namespace Core.Client
         {
             if (IsControlPressed(0, 166))
             {
+                if (PlayerInst.Firstname == null)
+                {
+                    BaseScript.TriggerServerEvent("core:requestPlayerData");
+                }
                 var PlayerPos = GetEntityCoords(PlayerPedId(), true);
                 var MainMenu = new NativeMenu("F5", "Menu personnel")
                 {
                     Visible = true,
+                    UseMouse = false
+                };
+                var shopMenu = new NativeMenu("Boutique", "~o~Boutique")
+                {
+                    UseMouse = false
+                };
+                var menuInfo = new NativeMenu("Informations", "Informations")
+                {
+                    UseMouse = false
+                };
+                var inventoryMenu = new NativeMenu("Inventaire", "Inventaire")
+                {
+                    UseMouse = false
+                };
+                var clothMenu = new NativeMenu("Vêtements", "Vêtements")
+                {
+                    UseMouse = false
+                };
+                var billsMenu = new NativeMenu("Factures", "Factures")
+                {
+                    UseMouse = false
+                };
+                var weaponsMenu = new NativeMenu("Armes", "Armes")
+                {
+                    UseMouse = false
+                };
+                var playerList = new NativeMenu("Liste des joueurs", "Liste des joueurs")
+                {
+                    UseMouse = false
+                };
+                var reportList = new NativeMenu("Liste des reports", "Liste des reports")
+                {
+                    UseMouse = false
+                };
+                var vip = new NativeMenu("VIP", "VIP")
+                {
+                    UseMouse = false
+                };
+                var carImport = new NativeMenu("Véhicules import", "Véhicules import")
+                {
+                    UseMouse = false
+                };
+                var lootbox = new NativeMenu("Caisse du mois", "Caisse du mois")
+                {
                     UseMouse = false
                 };
                 if (PlayerInst.Rank == "staff")
@@ -56,10 +105,6 @@ namespace Core.Client
                     };
                     Pool.Add(adminMenu);
                     MainMenu.AddSubMenu(adminMenu);
-                    var playerList = new NativeMenu("Liste des joueurs", "Liste des joueurs")
-                    {
-                        UseMouse = false
-                    };
                     Pool.Add(playerList);
                     for (int i = 0; i < Client.PlayersInstList.Count; i++)
                     {
@@ -131,10 +176,7 @@ namespace Core.Client
                         playerList.AddSubMenu(playerMenu);
                     }
                     adminMenu.AddSubMenu(playerList);
-                    var reportList = new NativeMenu("Liste des reports", "Liste des reports")
-                    {
-                        UseMouse = false
-                    };
+                    
                     Pool.Add(reportList);
                     adminMenu.AddSubMenu(reportList);
 
@@ -246,17 +288,8 @@ namespace Core.Client
 
                 if (Client.IsDead == false)
                 {
-                    var shopMenu = new NativeMenu("Boutique", "~o~Boutique")
-                    {
-                        UseMouse = false
-                    };
                     shopMenu.Add(new NativeItem("[V.I.P] Aucun"));
                     shopMenu.Add(new NativeItem($"Bitcoins: {PlayerInst.Bitcoin}"));
-
-                    var vip = new NativeMenu("VIP", "VIP")
-                    {
-                        UseMouse = false
-                    };
                     var vip_1 = new NativeItem("~f~~h~VIP~h~", "", "~g~500~w~ Bitcoins /mois");
                     var vip_2 = new NativeItem("~y~~h~VIP+~h~", "", "~g~700~w~ Bitcoins /mois");
                     var vip_3 = new NativeItem("~q~~h~MVP~h~", "", "~g~1000~w~ Bitcoins /mois");
@@ -265,10 +298,7 @@ namespace Core.Client
                     vip.Add(vip_3);
                     shopMenu.AddSubMenu(vip);
 
-                    var carImport = new NativeMenu("Véhicules import", "Véhicules import")
-                    {
-                        UseMouse = false
-                    };
+                    
                     VehicleImport[] values = (VehicleImport[])System.Enum.GetValues(typeof(VehicleImport));
 
                     foreach (VehicleImport vehicle in values)
@@ -314,21 +344,13 @@ namespace Core.Client
                         };
                     }
                     shopMenu.AddSubMenu(carImport);
-
-                    var lootbox = new NativeMenu("Caisse du mois", "Caisse du mois")
-                    {
-                        UseMouse = false
-                    };
                     shopMenu.AddSubMenu(lootbox);
 
                     Pool.Add(vip);
                     Pool.Add(carImport);
                     Pool.Add(lootbox);
 
-                    var menuInfo = new NativeMenu("Informations", "Informations")
-                    {
-                        UseMouse = false
-                    };
+                    
                     menuInfo.Add(new NativeItem($"~g~${PlayerInst.Money}"));
                     menuInfo.Add(new NativeItem($"{PlayerInst.Firstname} {PlayerInst.Lastname}"));
                     menuInfo.Add(new NativeItem($"Né le {PlayerInst.Birth}"));
@@ -352,11 +374,7 @@ namespace Core.Client
                     {
 
                     };
-
-                    var inventoryMenu = new NativeMenu("Inventaire", "Inventaire")
-                    {
-                        UseMouse = false
-                    };
+                    
                     var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerInst.Inventory);
                     if (items != null)
                     {
@@ -373,11 +391,7 @@ namespace Core.Client
                             }
                         }
                     }
-
-                    var clothMenu = new NativeMenu("Vêtements", "Vêtements")
-                    {
-                        UseMouse = false
-                    };
+                    
                     var clothesInfo = JsonConvert.DeserializeObject<List<ClothesInfo>>(PlayerInst.ClothesList);
                     if (clothesInfo != null)
                     {
@@ -410,11 +424,7 @@ namespace Core.Client
                             }
                         }
                     }
-
-                    var billsMenu = new NativeMenu("Factures", "Factures")
-                    {
-                        UseMouse = false
-                    };
+                    
                     var bills = JsonConvert.DeserializeObject<List<Bills>>(PlayerInst.Bills);
                     if (bills != null)
                     {
@@ -441,96 +451,6 @@ namespace Core.Client
                             };
                         }
                     }
-
-                    var carMenu = new NativeMenu("Gestion du véhicule", "Gestion du véhicule")
-                    {
-                        UseMouse = false
-                    };
-
-                    if (IsPedInAnyVehicle(GetPlayerPed(-1), false) == true)
-                    {
-                        var engineHealth = (GetVehicleEngineHealth(GetVehiclePedIsIn(PlayerPedId(), false))) * 100.0 / 5000.0 * 5;
-                        var vehicleStatus = new NativeItem($"Etat du moteur: {String.Format("{0:0.##}", engineHealth)}%");
-                        carMenu.Add(vehicleStatus);
-                        var driftMode = new NativeCheckboxItem("Activer le mode Drift");
-                        carMenu.Add(driftMode);
-                        var driftState = false;
-                        driftMode.Activated += (sender, e) =>
-                        {
-                            driftState = !driftState;
-                            if (IsPedInAnyVehicle(GetPlayerPed(-1), false) == true)
-                            {
-                                if (driftState)
-                                {
-                                    SetVehicleReduceGrip(GetVehiclePedIsIn(PlayerPedId(), false), true);
-                                }
-                                else
-                                {
-                                    SetVehicleReduceGrip(GetVehiclePedIsIn(PlayerPedId(), false), false);
-                                }
-                            }
-                            else
-                            {
-                                Format.SendNotif("~r~Vous n'êtes pas dans un véhicule");
-                            }
-                        };
-
-                        var doorsItem = new NativeListItem<string>("Ouvrir / Fermer une porte", "", "Avant gauche", "Avant droit", "Arrière gauche", "Arrière droit", "Capot", "Coffre", "Toutes les portes");
-                        var doors = new List<string>() { "Front Left", "Front Right", "Rear Left", "Rear Right", "Hood", "Trunk" };
-                        carMenu.Add(doorsItem);
-
-                        doorsItem.Activated += (sender, e) =>
-                        {
-                            if (IsPedInAnyVehicle(GetPlayerPed(-1), false) == true)
-                            {
-                                if (GetPedInVehicleSeat(GetVehiclePedIsIn(PlayerPedId(), false), -1) == GetPlayerPed(-1))
-                                {
-                                    var index = doorsItem.SelectedIndex;
-                                    if (index <= 5)
-                                    {
-                                        bool open = GetVehicleDoorAngleRatio(GetVehiclePedIsIn(GetPlayerPed(-1), false), index) > 0.1f ? true : false;
-
-                                        if (open)
-                                        {
-                                            SetVehicleDoorShut(GetVehiclePedIsIn(GetPlayerPed(-1), false), index, false);
-                                        }
-                                        else
-                                        {
-                                            SetVehicleDoorOpen(GetVehiclePedIsIn(GetPlayerPed(-1), false), index, false, false);
-                                        }
-                                    }
-                                    else if (doorsItem.SelectedItem == "Toutes les portes")
-                                    {
-                                        var open = false;
-                                        for (var door = 0; door < 5; door++)
-                                        {
-
-                                            open = !open;
-
-                                            if (open)
-                                            {
-                                                SetVehicleDoorsShut(GetVehiclePedIsIn(GetPlayerPed(-1), false), false);
-
-                                            }
-                                            else
-                                            {
-                                                SetVehicleDoorOpen(GetVehiclePedIsIn(GetPlayerPed(-1), false), door, false, false);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                Format.SendNotif("~r~Vous n'êtes pas dans un véhicule");
-                            }
-                        };
-                    }
-
-                    var weaponsMenu = new NativeMenu("Armes", "Armes")
-                    {
-                        UseMouse = false
-                    };
 
                     if (items != null)
                     {
@@ -566,13 +486,12 @@ namespace Core.Client
                             }
                         }
                     }
-
-                    SetSubmenu(MainMenu, shopMenu, menuInfo, inventoryMenu, clothMenu, billsMenu, carMenu, weaponsMenu);
-                    SetPool(MainMenu, shopMenu, menuInfo, inventoryMenu, clothMenu, billsMenu, carMenu, weaponsMenu);
                 } else
                 {
                     Format.SendNotif("~r~Vous êtes mort...");
                 }
+                SetSubmenu(MainMenu, shopMenu, menuInfo, inventoryMenu, clothMenu, billsMenu, weaponsMenu);
+                SetPool(MainMenu, shopMenu, menuInfo, inventoryMenu, clothMenu, billsMenu, weaponsMenu);
             }
         }
 

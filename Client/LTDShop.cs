@@ -122,12 +122,9 @@ namespace Core.Client
             foreach (var ltd in LTDShops)
             {
                 var distance = playerCoords.DistanceToSquared(ltd.Checkout);
-                if (distance < 4)
+                if (distance < 5)
                 {
                     Format.SetMarker(ltd.Checkout, MarkerType.HorizontalCircleFat);
-                }
-                if (distance < 1)
-                {
                     Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir");
 
                     if (IsControlJustPressed(0, 38))
@@ -163,7 +160,7 @@ namespace Core.Client
                                 {
                                     Format.SendNotif("~r~La somme est trop élevée");
                                 }
-                                
+
                             };
                         }
 

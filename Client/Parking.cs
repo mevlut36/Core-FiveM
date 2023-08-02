@@ -18,59 +18,7 @@ namespace Core.Client
         public Dictionary<Vector3, List<Vector3>> parkingDict = new Dictionary<Vector3, List<Vector3>>();
         public List<Vector3> parkingEnterList = new List<Vector3>();
 
-        public Vector3 desertParkingKey = new Vector3(1734.8f, 3318, 41.2f);
-        List<Vector3> desertParkingValues = new List<Vector3>()
-        {
-            new Vector3(1726, 3315.1f, 41.2f)
-        };
-        
-        public Vector3 redParkingKey = new Vector3(-285.5f, -887.2f, 31);
-        List<Vector3> redParkingValues = new List<Vector3>()
-        {
-            new Vector3(-292.8f, -886, 31),
-            new Vector3(-300.3f, -884.6f, 31),
-            new Vector3(-298.5f, -899.5f, 31)
-        };
-
-        Vector3 centralParkingKey = new Vector3(216.8f, -810, 30.7f);
-        List<Vector3> centralParkingValues = new List<Vector3>()
-        {
-            new Vector3(227.6f, -789.1f, 30.6f),
-            new Vector3(239.6f, -787.7f, 30.5f),
-            new Vector3(234.6f, -802.9f, 30.4f)
-        };
-        
-
-        Vector3 paletoParkingKey = new Vector3(110.7f, 6605.2f, 31.8f);
-        List<Vector3> paletoParkingValues = new List<Vector3>()
-        {
-            new Vector3(118.9f, 6599.5f, 32),
-            new Vector3(123.5f, 6594.7f, 32),
-            new Vector3(126.8f, 6590, 32)
-        };
-
-        Vector3 vinewoodParkingKey = new Vector3(65.7f, 13.7f, 69);
-        List<Vector3> vinewoodParkingValues = new List<Vector3>()
-        {
-            new Vector3(60.5f, 17.6f, 69.1f),
-            new Vector3(54.4f, 19.3f, 69.5f)
-        };
-        
-        Vector3 hippodromeParkingKey = new Vector3(1118.3f, 234.8f, 80.8f);
-        List<Vector3> hippodromeParkingValues = new List<Vector3>()
-        {
-            new Vector3(1123.5f, 243.2f, 80.8f),
-            new Vector3(1127.4f, 249.4f, 80.8f),
-            new Vector3(1113.7f, 252.8f, 80.8f)
-        };
-        
-        Vector3 placeCubeParkingKey = new Vector3(214.5f, -915.1f, 18.2f);
-        List<Vector3> placeCubeParkingValues = new List<Vector3>()
-        {
-            new Vector3(211, -883.7f, 18.2f),
-            new Vector3(222.4f, -879.3f, 18.2f),
-            new Vector3(231.5f, -885.5f, 18.2f)
-        };
+        List<ParkingInfo> Parkings = new List<ParkingInfo>();
 
         public List<VehicleInfo> CarList = new List<VehicleInfo>();
         public Parking(ClientMain caller)
@@ -80,24 +28,102 @@ namespace Core.Client
             Format = caller.Format;
             Client.AddEvent("core:sendVehicleInfos", new Action<string, int>(GetVehicles));
 
-            parkingDict.Add(desertParkingKey, desertParkingValues);
-            parkingDict.Add(redParkingKey, redParkingValues);
-            parkingDict.Add(centralParkingKey, centralParkingValues);
-            parkingDict.Add(paletoParkingKey, paletoParkingValues);
-            parkingDict.Add(vinewoodParkingKey, vinewoodParkingValues);
-            parkingDict.Add(hippodromeParkingKey, hippodromeParkingValues);
-            parkingDict.Add(placeCubeParkingKey, placeCubeParkingValues);
-
-            parkingEnterList.Add(new Vector3(-358.6f, -891.4f, 31f));
-            parkingEnterList.Add(new Vector3(225.5f, -755.3f, 30.8f));
-            parkingEnterList.Add(new Vector3(114.5f, 6611.6f, 31.8f));
-            parkingEnterList.Add(new Vector3(57.2f, 28.8f, 70));
-            parkingEnterList.Add(new Vector3(1115.6f, 264.4f, 80.5f));
-            parkingEnterList.Add(new Vector3(231.7f, -874, 18.2f));
-            BaseScript.TriggerServerEvent("core:getVehicleInfo");
-            foreach (var entry in parkingDict)
+            ParkingInfo DriftParking = new ParkingInfo("Drift Parking",
+            new Vector3(-2184.8f, 1099, -23.2f),
+            new Vector3(-2177.4f, 1107.4f, -24.3f),
+            new List<Vector3>()
             {
-                Blip myBlip = World.CreateBlip(entry.Key);
+                new Vector3(-2178.1f, 1094.7f, -24.3f),
+                new Vector3(-2177.8f, 1087.2f, -24.3f),
+                new Vector3(-2158.8f, 1086.8f, -24.3f),
+            }, 90);
+            Parkings.Add(DriftParking);
+
+            ParkingInfo DesertParking = new ParkingInfo("Drift Desert",
+                new Vector3(1734.8f, 3318, 41.2f),
+                new Vector3(1726, 3315.1f, 41.2f),
+                new List<Vector3>()
+                {
+                    new Vector3(1726, 3315.1f, 41.2f)
+                }, 90);
+            Parkings.Add(DesertParking);
+
+            ParkingInfo RedParking = new ParkingInfo("Red Parking",
+                new Vector3(-285.5f, -887.2f, 31),
+                new Vector3(-358.6f, -891.4f, 31f),
+                new List<Vector3>()
+                {
+                    new Vector3(-292.8f, -886, 31),
+                    new Vector3(-300.3f, -884.6f, 31),
+                    new Vector3(-298.5f, -899.5f, 31)
+                }, 90
+            );
+            Parkings.Add(RedParking);
+
+            ParkingInfo CentralParking = new ParkingInfo("Central Parking",
+                new Vector3(216.8f, -810, 30.7f),
+                new Vector3(225.5f, -755.3f, 30.8f),
+                new List<Vector3>()
+                {
+                    new Vector3(227.6f, -789.1f, 30.6f),
+                    new Vector3(239.6f, -787.7f, 30.5f),
+                    new Vector3(234.6f, -802.9f, 30.4f)
+                }, 90
+            );
+            Parkings.Add(CentralParking);
+
+            ParkingInfo PaletoParking = new ParkingInfo("Paleto Parking",
+                new Vector3(110.7f, 6605.2f, 31.8f),
+                new Vector3(114.5f, 6611.6f, 31.8f),
+                new List<Vector3>()
+                {
+                    new Vector3(118.9f, 6599.5f, 32),
+                    new Vector3(123.5f, 6594.7f, 32),
+                    new Vector3(126.8f, 6590, 32)
+                }, 90
+            );
+            Parkings.Add(PaletoParking);
+
+            ParkingInfo VinewoodParking = new ParkingInfo("Vinewood Parking",
+                new Vector3(65.7f, 13.7f, 69),
+                new Vector3(57.2f, 28.8f, 70),
+                new List<Vector3>()
+                {
+                    new Vector3(60.5f, 17.6f, 69.1f),
+                    new Vector3(54.4f, 19.3f, 69.5f)
+                }, 90
+            );
+            Parkings.Add(VinewoodParking);
+
+            ParkingInfo HippodromeParking = new ParkingInfo("Hippodrome Parking",
+                new Vector3(1118.3f, 234.8f, 80.8f),
+                new Vector3(1115.6f, 264.4f, 80.5f),
+                new List<Vector3>()
+                {
+                    new Vector3(1123.5f, 243.2f, 80.8f),
+                    new Vector3(1127.4f, 249.4f, 80.8f),
+                    new Vector3(1113.7f, 252.8f, 80.8f)
+                }, 90
+            );
+            Parkings.Add(HippodromeParking);
+
+            ParkingInfo CubePlaceParking = new ParkingInfo("Cube Place Parking",
+                new Vector3(214.5f, -915.1f, 18.2f),
+                new Vector3(231.7f, -874, 18.2f),
+                new List<Vector3>()
+                {
+                    new Vector3(211, -883.7f, 18.2f),
+                    new Vector3(222.4f, -879.3f, 18.2f),
+                    new Vector3(231.5f, -885.5f, 18.2f)
+                }, 90
+            );
+            Parkings.Add(CubePlaceParking);
+
+            BaseScript.TriggerServerEvent("core:getVehicleInfo");
+
+            foreach (var parking in Parkings)
+            {
+                Blip myBlip = World.CreateBlip(parking.MenuPosition);
                 myBlip.Sprite = BlipSprite.Garage;
                 myBlip.Name = "Parking";
                 myBlip.IsShortRange = true;
@@ -232,13 +258,38 @@ namespace Core.Client
                 }
             }
 
-            foreach (var entry in parkingEnterList)
+            foreach (var parking in Parkings)
+            {
+                if (!isPlayerInVehicle)
+                {
+                    var dist = parking.MenuPosition.DistanceToSquared(playerCoords);
+
+                    if (dist < 100)
+                    {
+                        Format.SetMarker(parking.MenuPosition, MarkerType.CarSymbol);
+                    }
+                    if (dist < 2 && menu == null)
+                    {
+                        var parkingList = parking.VehiclesPosition;
+                        menu = PrepareParkingMenu(parkingList);
+
+                        Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir la liste des véhicules");
+
+                        if (IsControlPressed(0, 38))
+                        {
+                            menu.Visible = true;
+                        }
+                    }
+                }
+            }
+
+            foreach (var parking in Parkings)
             {
                 if (isPlayerInVehicle)
                 {
-                    var distEntrer = entry.DistanceToSquared(playerCoords);
+                    var distEntrer = parking.DeleteVehicle.DistanceToSquared(playerCoords);
 
-                    Format.SetMarker(entry, MarkerType.CarSymbol);
+                    Format.SetMarker(parking.DeleteVehicle, MarkerType.CarSymbol);
 
                     if (distEntrer < 3)
                     {
@@ -328,17 +379,18 @@ namespace Core.Client
         {
             ParkingMenu();
             var playerPos = Game.PlayerPed.Position;
-            foreach (var entry in parkingDict)
+            foreach (var parking in Parkings)
             {
                 float safeZoneRadius = 30;
 
-                if (World.GetDistance(playerPos, entry.Value[0]) < safeZoneRadius)
+                if (World.GetDistance(playerPos, parking.MenuPosition) < safeZoneRadius)
                 {
                     NetworkSetFriendlyFireOption(false);
+                    Game.DisableControlThisFrame(0, Control.Attack);
                     Game.DisableControlThisFrame(2, Control.SelectWeapon);
                     Game.PlayerPed.Weapons.Select(WeaponHash.Unarmed, true);
                     Game.DisableControlThisFrame(2, Control.MeleeAttack1);
-                    Format.SendTextUI("Vous êtes dans une ~g~Safe Zone~s~.");
+                    // Format.SendTextUI("Vous êtes dans une ~g~Safe Zone~s~.");
                 } else
                 {
                     NetworkSetFriendlyFireOption(true);
@@ -346,5 +398,23 @@ namespace Core.Client
             }
         }
 
+    }
+
+    class ParkingInfo
+    {
+        public string Name;
+        public Vector3 MenuPosition;
+        public Vector3 DeleteVehicle;
+        public List<Vector3> VehiclesPosition;
+        public int Rotation;
+
+        public ParkingInfo(string name, Vector3 menuPosition, Vector3 deleteVehicle, List<Vector3> vehiclesPosition, int rotation)
+        { 
+            Name = name;
+            MenuPosition = menuPosition;
+            DeleteVehicle = deleteVehicle;
+            VehiclesPosition = vehiclesPosition;
+            Rotation = rotation;
+        }
     }
 }

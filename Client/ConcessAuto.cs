@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static CitizenFX.Core.Native.API;
 using Core.Shared;
+using System.Diagnostics;
 
 namespace Core.Client
 {
@@ -20,9 +21,9 @@ namespace Core.Client
         Format Format;
         Parking Parking;
         ObjectPool Pool = new ObjectPool();
-        public PlayerMenu PlayerMenu;
-        public Vector3 vehicleOut = new Vector3(-47.1f, -1113.3f, 26.44f);
-        public Vector3 Vendeur = new Vector3(-41.5f, -1114.1f, 25.6f);
+        PlayerMenu PlayerMenu;
+        public Vector3 vehicleOut = new Vector3(-42.3f, -1099, 26.4f);
+        public Vector3 Vendeur = new Vector3(-33.8f, -1103.4f, 25.9f);
         bool Previsualisation_state = false;
         int Car = 0;
         Vehicle MyVehicle;
@@ -41,6 +42,7 @@ namespace Core.Client
             myBlip.IsShortRange = true;
 
             BaseScript.TriggerServerEvent("core:spawnPnj", "cs_josh", Vendeur);
+            RemoveVehiclesFromGeneratorsInArea(-76.7f, -1125.5f, 25, -4.3f, -1081.5f, 50, 1);
         }
 
         public async void Previsualisation(string vehicle)
@@ -52,7 +54,7 @@ namespace Core.Client
 
                 if (!model.IsInCdImage || !model.IsValid)
                 {
-                    Debug.WriteLine($"Le modèle du véhicule {vehicle} n'est pas valide ou n'est pas présent dans les fichiers du jeu.");
+                    CitizenFX.Core.Debug.WriteLine($"Le modèle du véhicule {vehicle} n'est pas valide ou n'est pas présent dans les fichiers du jeu.");
                     return;
                 }
 
@@ -73,7 +75,7 @@ namespace Core.Client
                 }
                 else
                 {
-                    Debug.WriteLine($"La création du véhicule {vehicle} a échoué.");
+                    CitizenFX.Core.Debug.WriteLine($"La création du véhicule {vehicle} a échoué.");
                 }
             }else
             {
@@ -122,14 +124,12 @@ namespace Core.Client
 
                 var buy = new NativeItem("~g~Acheter");
                 menu.Add(buy);
-
-                buy.Activated += async (sender, e) =>
+                var cost = GetVehicleModelValue(model);
+                var money = PlayerMenu.PlayerInst.Money;
+                CitizenFX.Core.Debug.WriteLine($"{PlayerMenu.PlayerInst.Money}, {GetVehicleModelValue(model)}");
+                buy.Activated += (sender, e) =>
                 {
-                    var cost = GetVehicleModelValue(model);
-                    BaseScript.TriggerServerEvent("core:getPlayerMoney");
-                    await BaseScript.Delay(100);
-
-                    if (PlayerMenu.PlayerInst.Money >= cost)
+                    if (money >= cost)
                     {
                         Format.SendNotif("~g~Vous avez bien acheté le véhicule.\n Il sera livré dans votre garage dans quelques minutes...");
                         BaseScript.TriggerServerEvent("core:transaction", cost);
@@ -235,6 +235,8 @@ namespace Core.Client
                     foreach (var vehicleName in vehicleClasses[vehicleClass])
                     {
                         var vehicleHash = GetHashKey(vehicleName);
+                        // todo
+                        // SetVehicleHandlingFloat(vehicleHash, "CHandlingData", "nMonetaryValue", 100000);
                         var vehicleItem = new NativeItem(vehicleName, $"Acheter {vehicleName}", $"{GetVehicleModelMonetaryValue(vehicleHash)}");
                         classMenu.Add(vehicleItem);
 

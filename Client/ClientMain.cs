@@ -29,6 +29,7 @@ namespace Core.Client
         public VehicleSystem VehicleSystem;
         public ContainerSystem ContainerSystem;
         public DiscordPresence DiscordPresence;
+        public Teleport Teleport;
         public string Result = "";
         public List<PlayerInstance> PlayersInstList = new List<PlayerInstance>();
         public List<string> PlayersHandle = new List<string>();
@@ -64,10 +65,10 @@ namespace Core.Client
             });
 
             Format = new Format(this);
+            PlayerMenu = new PlayerMenu(this);
             PlayerSystem = new PlayerSystem(this);
             Parking = new Parking(this);
             ConcessAuto = new ConcessAuto(this);
-            PlayerMenu = new PlayerMenu(this);
             AmmuNation = new AmmuNation(this);
             Bank = new Bank(this);
             LTDShop = new LTDShop(this);
@@ -75,7 +76,7 @@ namespace Core.Client
             VehicleSystem = new VehicleSystem(this);
             ContainerSystem = new ContainerSystem(this);
             DiscordPresence = new DiscordPresence(this);
-
+            Teleport = new Teleport(this);
             EventHandlers["core:getPlayerData"] += new Action<string>(PlayerMenu.GetPlayerData);
             EventHandlers["core:reveivePlayersRobbery"] += new Action<string>(Bank.GetPlayers);
             RegisterCommand("report", new Action<int, List<object>, string>((source, args, raw) =>
@@ -438,6 +439,7 @@ namespace Core.Client
         public async Task OnTick()
         {
             var playerPos = Game.PlayerPed.Position;
+            Format.SendTextUI($"{playerPos}");
             Pool.Process();
             for (int i = 0; i <= 15; i++)
             {
@@ -457,7 +459,8 @@ namespace Core.Client
             ClothShop.OnTick();
             VehicleSystem.OnTick();
             AmmuNation.GunShop();
-            ContainerSystem.OnTick();
+            Teleport.OnTick();
+            // ContainerSystem.OnTick();
             NarcoMenu();
 
             if (Game.PlayerPed != null && Game.PlayerPed.IsAlive)

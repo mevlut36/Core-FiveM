@@ -69,7 +69,7 @@ namespace Core.Client
             foreach (var bank in Banks)
             {
                 var distance = playerCoords.DistanceToSquared(bank.Checkout);
-                if (distance < 4)
+                if (distance < 5)
                 {
                     Format.SetMarker(bank.Checkout, MarkerType.HorizontalCircleFat);
                     Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir");
