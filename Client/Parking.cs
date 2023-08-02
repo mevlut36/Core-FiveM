@@ -233,31 +233,6 @@ namespace Core.Client
 
             NativeMenu menu = null;
 
-            foreach (var entry in parkingDict)
-            {
-                if (!isPlayerInVehicle)
-                {
-                    var dist = entry.Key.DistanceToSquared(playerCoords);
-
-                    if (dist < 100)
-                    {
-                        Format.SetMarker(entry.Key, MarkerType.CarSymbol);
-                    }
-                    if (dist < 2 && menu == null)
-                    {
-                        var parkingList = entry.Value;
-                        menu = PrepareParkingMenu(parkingList);
-
-                        Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir la liste des véhicules");
-
-                        if (IsControlPressed(0, 38))
-                        {
-                            menu.Visible = true;
-                        }
-                    }
-                }
-            }
-
             foreach (var parking in Parkings)
             {
                 if (!isPlayerInVehicle)
