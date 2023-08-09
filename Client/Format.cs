@@ -134,6 +134,14 @@ namespace Core.Client
             Game.PlayerPed.Task.PlayAnimation(animDict, animName, speed, -1, flags);
         }
 
+        public void StopAnimation(string animDict, string animName)
+        {
+            if (Function.Call<bool>(Hash.IS_ENTITY_PLAYING_ANIM, Game.PlayerPed.Handle, animDict, animName, 3))
+            {
+                Game.PlayerPed.Task.ClearAnimation(animDict, animName);
+            }
+        }
+
         public async Task AddPropToPlayer(string prop1, int bone, float off1, float off2, float off3, float rot1, float rot2, float rot3, int duration)
         {
             int player = PlayerPedId();

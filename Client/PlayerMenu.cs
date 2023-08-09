@@ -34,7 +34,7 @@ namespace Core.Client
 
         public PlayerInstance PlayerInst = new PlayerInstance
         {
-            Inventory = "",
+            Inventory = new List<ItemQuantity>(),
             Money = 0
         };
 
@@ -273,7 +273,7 @@ namespace Core.Client
                     clearVehicleArea.Activated += async (sender, e) =>
                     {
                         var input = await Format.GetUserInput("Combien de mètre", "", 5);
-                        ClearAreaOfVehicles(PlayerPos.X, PlayerPos.Y, PlayerPos.Z, int.Parse(input), false, false, false, false, false);
+                        ClearAreaOfEverything(PlayerPos.X, PlayerPos.Y, PlayerPos.Z, int.Parse(input), false, false, false, false);
                     };
 
                     var bomb = new NativeItem("Crash Bandicoot");
@@ -375,7 +375,7 @@ namespace Core.Client
 
                     };
                     
-                    var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerInst.Inventory);
+                    var items = PlayerInst.Inventory;
                     if (items != null)
                     {
                         foreach (var item in items)
@@ -546,27 +546,35 @@ namespace Core.Client
                         Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)50);
                         SetEntityHealth(GetPlayerPed(-1), GetEntityHealth(GetPlayerPed(-1))+10);
                         await Format.AddPropToPlayer("prop_sandwich_01", 28422, 0, 0, 0, 0, 0, 0, 3000);
+                        Format.StopAnimation("mini@sprunk", "plyr_buy_drink_pt2");
                         break;
                     case "Sandwich":
                         Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)50);
                         SetEntityHealth(GetPlayerPed(-1), GetEntityHealth(GetPlayerPed(-1)) + 30);
                         await Format.AddPropToPlayer("prop_sandwich_01", 28422, 0, 0, 0, 0, 0, 0, 3000);
+                        Format.StopAnimation("mini@sprunk", "plyr_buy_drink_pt2");
                         break;
                     case "Burger":
                         Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)50);
                         SetEntityHealth(GetPlayerPed(-1), GetEntityHealth(GetPlayerPed(-1)) + 30);
                         await Format.AddPropToPlayer("prop_cs_burger_01", 28422, 0, 0, 0, 0, 0, 0, 3000);
+                        Format.StopAnimation("mini@sprunk", "plyr_buy_drink_pt2");
                         break;
                     case "Eau":
                         Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)50);
                         await Format.AddPropToPlayer("prop_water_bottle", 28422, 0, 0, 0, 0, 0, 0, 3000);
+                        Format.StopAnimation("mini@sprunk", "plyr_buy_drink_pt2");
                         break;
                     case "Coca Cola":
                         Format.PlayAnimation("mini@sprunk", "plyr_buy_drink_pt2", 8, (AnimationFlags)50);
                         await Format.AddPropToPlayer("prop_ecola_can", 28422, 0, 0, 0, 0, 0, 0, 3000);
+                        await BaseScript.Delay(3000);
+                        Format.StopAnimation("mini@sprunk", "plyr_buy_drink_pt2");
                         break;
                     case "Outil de crochetage":
                         Format.PlayAnimation("anim@heists@humane_labs@emp@hack_door", "hack_intro", 8, (AnimationFlags)50);
+                        await BaseScript.Delay(3000);
+                        Format.StopAnimation("anim@heists@humane_labs@emp@hack_door", "hack_intro");
                         break;
                     case "Menotte":
                         var player = GetPlayerPed(-1);

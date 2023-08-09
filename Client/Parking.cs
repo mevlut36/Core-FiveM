@@ -15,6 +15,7 @@ namespace Core.Client
         ClientMain Client;
         Format Format;
         ObjectPool Pool = new ObjectPool();
+        PlayerMenu PlayerMenu;
         public Dictionary<Vector3, List<Vector3>> parkingDict = new Dictionary<Vector3, List<Vector3>>();
         public List<Vector3> parkingEnterList = new List<Vector3>();
 
@@ -26,8 +27,8 @@ namespace Core.Client
             Pool = caller.Pool;
             Client = caller;
             Format = caller.Format;
-            Client.AddEvent("core:sendVehicleInfos", new Action<string, int>(GetVehicles));
-
+            PlayerMenu = caller.PlayerMenu;
+            // Client.AddEvent("core:sendVehicleInfos", new Action<string, int>(GetVehicles));
             ParkingInfo DriftParking = new ParkingInfo("Drift Parking",
             new Vector3(-2184.8f, 1099, -23.2f),
             new Vector3(-2177.4f, 1107.4f, -24.3f),
@@ -130,22 +131,14 @@ namespace Core.Client
             }
         }
 
-        public void GetVehicles(string json, int player)
+        public void GetVehicles()
         {
-            if (json == null)
-            {
-                return;
-            }
-            
-            List<VehicleInfo> vehicles = JsonConvert.DeserializeObject<List<VehicleInfo>>(json);
-            Client.vehicles = vehicles;
+            var vehicles = JsonConvert.DeserializeObject<List<VehicleInfo>>(PlayerMenu.PlayerInst.Cars);
             if (vehicles != null && vehicles.Count > 0)
             {
                 CarList.Clear();
-                foreach (VehicleInfo info in vehicles)
-                {
-                    CarList.Add(info);
-                }
+
+                CarList = vehicles;
             }
         }
 
@@ -310,6 +303,7 @@ namespace Core.Client
                                     SetVehicleNumberPlateText(vehTask.Result.Handle, $"{car.Plate}");
                                     SetVehicleColours(vehTask.Result.Handle, car.ColorPrimary, car.ColorSecondary);
                                     SetVehicleDoorsLocked(vehTask.Result.Handle, 2);
+                                    SetVehicleLivery(model, car.LiveryMod);
                                     Format.SendNotif("~g~Votre véhicule est bien sorti.");
                                     menu.Visible = false;
                                 }

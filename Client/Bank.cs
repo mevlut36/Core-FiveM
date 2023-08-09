@@ -64,7 +64,7 @@ namespace Core.Client
         public void BankMenu()
         {
             var playerCoords = GetEntityCoords(PlayerPedId(), false);
-            var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerMenu.PlayerInst.Inventory);
+            var items = PlayerMenu.PlayerInst.Inventory;
 
             foreach (var bank in Banks)
             {
@@ -119,7 +119,7 @@ namespace Core.Client
                                 }
                             }
 
-                            PlayerMenu.PlayerInst.Inventory = JsonConvert.SerializeObject(items);
+                            PlayerMenu.PlayerInst.Inventory = items;
                             BaseScript.TriggerServerEvent("core:bankTransaction", actionBank.SelectedItem, parsedInput);
                             menu.Visible = false;
                         };
@@ -163,7 +163,7 @@ namespace Core.Client
                         menu.Add(robbery);
                         robbery.Activated += async (sender, e) =>
                         {
-                            var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerMenu.PlayerInst.Inventory);
+                            var items = PlayerMenu.PlayerInst.Inventory;
 
                             var pc = items.FirstOrDefault(item => item.Item == "Ordinateur");
                             var drill = items.FirstOrDefault(item => item.Item == "Perceuse");
@@ -171,10 +171,14 @@ namespace Core.Client
 
                             if (pc.Quantity > 0 && drill.Quantity > 0)
                             {
-                                Format.PlayAnimation("anim@heists@fleeca_bank@drilling", "drill_straight_start", 8, (AnimationFlags)49);
-                                await Format.AddPropToPlayer("hei_prop_heist_drill", 28422, 0, 0, 0, 0, 0, 0, 10000);
-                                PlaySoundFrontend(-1, "Drill_Pin_Break", "DLC_HEIST_FLEECA_SOUNDSET", true);
                                 Format.SendNotif("~r~Braquage en cours...");
+                                Format.PlayAnimation("missbigscore2aswitch", "switch_mic_car_fra_laptop_hacker", 8, (AnimationFlags)50);
+                                await Format.AddPropToPlayer("hei_prop_hst_laptop", 28422, 0, 0, 0, 0, 0, 0, 5000);
+                                Format.StopAnimation("missbigscore2aswitch", "switch_mic_car_fra_laptop_hacker");
+                                Format.PlayAnimation("anim@heists@fleeca_bank@drilling", "drill_straight_start", 8, (AnimationFlags)50);
+                                PlaySoundFrontend(-1, "Drill_Pin_Break", "DLC_HEIST_FLEECA_SOUNDSET", true);
+                                await Format.AddPropToPlayer("hei_prop_heist_drill", 28422, 0, 0, 0, 0, 0, 0, 5000);
+                                Format.StopAnimation("anim@heists@fleeca_bank@drilling", "drill_straight_start");
                                 uint streetNameHash = 0;
                                 uint crossingRoadHash = 0;
                                 GetStreetNameAtCoord(playerCoords.X, playerCoords.Y, playerCoords.Z, ref streetNameHash, ref crossingRoadHash);

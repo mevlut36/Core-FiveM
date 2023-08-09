@@ -30,13 +30,13 @@ namespace Core.Client
         public ContainerSystem ContainerSystem;
         public DiscordPresence DiscordPresence;
         public Teleport Teleport;
-        public string Result = "";
+
         public List<PlayerInstance> PlayersInstList = new List<PlayerInstance>();
         public List<string> PlayersHandle = new List<string>();
         public List<VehicleInfo> vehicles = new List<VehicleInfo>();
 
         public int PlayerMoney = 0;
-        public Vehicle MyVehicle;
+        public VehicleInfo MyVehicle;
 
         public bool IsDead = false;
         private DateTime DeathTime;
@@ -217,8 +217,7 @@ namespace Core.Client
             {
                 var player = JsonConvert.DeserializeObject<PlayerInstance>(json);
                 PlayerMenu.PlayerInst = player;
-                Debug.WriteLine(player.Skin);
-                var skin = JsonConvert.DeserializeObject<SkinInfo>(player.Skin);
+                var skin = JsonConvert.DeserializeObject<SkinInfo>(PlayerMenu.PlayerInst.Skin);
                 var ped = GetPlayerPed(-1);
                 var pedHash = skin.Gender == "Femme" ? PedHash.FreemodeFemale01 : PedHash.FreemodeMale01;
                 var model = new Model(pedHash);
@@ -250,12 +249,18 @@ namespace Core.Client
                 SetPedHeadOverlay(LocalPlayer.Character.Handle, 2, skin.Eyebrow, 10 * 0.1f);
                 SetPedHeadOverlayColor(LocalPlayer.Character.Handle, 1, 1, 1, 1);
                 SetPedHeadOverlayColor(LocalPlayer.Character.Handle, 2, 1, skin.EyebrowOpacity, skin.EyebrowOpacity);
-                Game.PlayerPed.Position = player.LastPosition;
+                Game.PlayerPed.Position = PlayerMenu.PlayerInst.LastPosition;
+                PlayerMenu.PlayerInst.Cars = PlayerMenu.PlayerInst.Cars;
+                var vehicles = JsonConvert.DeserializeObject<List<VehicleInfo>>(player.Cars);
+                if (vehicles != null && vehicles.Count > 0)
+                {
+                    Parking.CarList = vehicles;
+                }
             }
             catch (JsonSerializationException ex)
             {
                 Debug.WriteLine($"Error deserializing JSON: {ex.Message}");
-                Debug.WriteLine($"JSON: {json}");
+                // Debug.WriteLine($"JSON: {json}");
             }
         }
 
@@ -268,6 +273,7 @@ namespace Core.Client
             ClothShop.CreatePeds();
             SpawnDealer();
         }
+
         public async void DeathAnimation(int time)
         {
             Function.Call(Hash.REQUEST_ANIM_DICT, "dead");
@@ -282,6 +288,12 @@ namespace Core.Client
         public void ServerSendNotif(string text)
         {
             Format.SendNotif(text);
+        }
+
+        [EventHandler("core:getVehicleByPlate")]
+        public void GetVehicleByPlate(string json)
+        {
+            MyVehicle = JsonConvert.DeserializeObject<VehicleInfo>(json);
         }
 
         private async Task ScenarioSuppressionLoop()
@@ -386,7 +398,7 @@ namespace Core.Client
         public void NarcoMenu()
         {
             var playerCoords = GetEntityCoords(PlayerPedId(), false);
-            var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerMenu.PlayerInst.Inventory);
+            var items = PlayerMenu.PlayerInst.Inventory;
             var pnj = new Vector3(123.5f, -1040.4f, 29);
 
             var distance = GetDistanceBetweenCoords(pnj.X, pnj.Y, pnj.Z, playerCoords.X, playerCoords.Y, playerCoords.Z, false);
@@ -419,7 +431,7 @@ namespace Core.Client
                             if (result <= PlayerMenu.PlayerInst.Money)
                             {
                                 PlayerMenu.PlayerInst.Money -= result;
-                                PlayerMenu.PlayerInst.Inventory = JsonConvert.SerializeObject(items);
+                                PlayerMenu.PlayerInst.Inventory = items;
                                 TriggerServerEvent("core:transaction", result, item.Name, parsedInput, "item");
                                 menu.Visible = false;
                             }
@@ -439,7 +451,7 @@ namespace Core.Client
         public async Task OnTick()
         {
             var playerPos = Game.PlayerPed.Position;
-            Format.SendTextUI($"{playerPos}");
+            // Format.SendTextUI($"{playerPos}");
             Pool.Process();
             for (int i = 0; i <= 15; i++)
             {

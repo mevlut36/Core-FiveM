@@ -54,6 +54,8 @@ namespace Core.Client
             ClothShopList.Add(shop11);
             ClothShopInfo shop12 = new ClothShopInfo("Paleto Bay", new Vector3(5, 6513.8f, 31.7f), new Vector3(5.9f, 6511.3f, 30.9f));
             ClothShopList.Add(shop12);
+            ClothShopInfo shop13 = new ClothShopInfo("Casino", new Vector3(1102, 198.7f, -50f), new Vector3(1100.4f, 195.3f, -50));
+            ClothShopList.Add(shop13);
         }
 
         public async void CreatePeds()

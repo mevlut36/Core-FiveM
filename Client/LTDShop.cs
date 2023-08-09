@@ -117,7 +117,7 @@ namespace Core.Client
         public void LTDMenu()
         {
             var playerCoords = GetEntityCoords(PlayerPedId(), false);
-            var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerMenu.PlayerInst.Inventory);
+            var items = PlayerMenu.PlayerInst.Inventory;
 
             foreach (var ltd in LTDShops)
             {
@@ -152,7 +152,7 @@ namespace Core.Client
                                 if (result <= PlayerMenu.PlayerInst.Money)
                                 {
                                     PlayerMenu.PlayerInst.Money -= result;
-                                    PlayerMenu.PlayerInst.Inventory = JsonConvert.SerializeObject(items);
+                                    PlayerMenu.PlayerInst.Inventory = items;
                                     BaseScript.TriggerServerEvent("core:transaction", result, item.Name, parsedInput, "item");
                                     menu.Visible = false;
                                 }
@@ -172,7 +172,7 @@ namespace Core.Client
         public void ATMMenu()
         {
             var playerCoords = GetEntityCoords(PlayerPedId(), false);
-            var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerMenu.PlayerInst.Inventory);
+            var items = PlayerMenu.PlayerInst.Inventory;
 
             foreach (var ltd in LTDShops)
             {
@@ -227,7 +227,7 @@ namespace Core.Client
                                 }
                             }
 
-                            PlayerMenu.PlayerInst.Inventory = JsonConvert.SerializeObject(items);
+                            PlayerMenu.PlayerInst.Inventory = items;
                             BaseScript.TriggerServerEvent("core:bankTransaction", actionBank.SelectedItem, parsedInput);
                             menu.Visible = false;
                         };

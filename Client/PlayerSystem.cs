@@ -155,7 +155,7 @@ namespace Core.Client
                     PlayerRegister.Firstname = firstname;
                     PlayerRegister.Lastname = lastname;
                     PlayerRegister.Birth = birth;
-                    PlayerRegister.Inventory = "[]";
+                    PlayerRegister.Inventory = new List<ItemQuantity>();
                     PlayerRegister.Bills = "[]";
                     SkintonMenu();
                 }

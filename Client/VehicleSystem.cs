@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static CitizenFX.Core.Native.API;
 using Core.Shared;
+using Mono.CSharp;
 
 namespace Core.Client
 {
@@ -77,6 +78,7 @@ namespace Core.Client
             Vehicle closestVehicle = World.GetClosest<Vehicle>(playerCoords, World.GetAllVehicles());
             var isLock = GetVehicleDoorLockStatus(closestVehicle.Handle);
             string plate = GetVehicleNumberPlateText(closestVehicle.Handle);
+            var items = PlayerMenu.PlayerInst.Inventory;
             var menu = new NativeMenu($"{plate}", "Coffre de la voiture")
             {
                 UseMouse = false
@@ -89,100 +91,65 @@ namespace Core.Client
                 {
                     if (isLock != 2)
                     {
+                        BaseScript.TriggerServerEvent("core:requestVehicleByPlate", plate);
                         Pool.Add(menu);
                         menu.Visible = true;
+
                         var pick = new NativeMenu("Retirer", "Retirer")
                         {
                             UseMouse = false
                         };
                         menu.AddSubMenu(pick);
+                        Pool.Add(pick);
 
                         var drop = new NativeMenu("Déposer", "Déposer")
                         {
                             UseMouse = false
                         };
                         menu.AddSubMenu(drop);
-                        Pool.Add(pick);
                         Pool.Add(drop);
-
-                        List<BootInfo> bootsToRemove = new List<BootInfo>();
-                        foreach (VehicleInfo info in Client.vehicles)
+                        if (items != null)
                         {
-                            if (info.Plate == plate)
+                            foreach (var item in items)
                             {
-                                foreach (BootInfo boot in info.Boot)
+                                if (item.Quantity > 0 && item.Item != null)
                                 {
-                                    if (boot.Type == "item")
+                                    var invItem = new NativeItem($"{item.Item} ({item.Quantity})");
+                                    drop.Add(invItem);
+                                    invItem.Activated += async (sender, e) =>
                                     {
-                                        var item = new NativeItem($"{boot.Item} ({boot.Quantity})");
-                                        pick.Add(item);
-                                        item.Activated += async (sender, e) =>
+                                        var textInput = await Format.GetUserInput("Quantité", "1", 4);
+                                        var parsedInput = int.Parse(textInput);
+                                        if (parsedInput <= item.Quantity)
                                         {
-                                            var textInput = await Format.GetUserInput("Quantité", "1", 4);
-                                            var parsedInput = int.Parse(textInput);
-                                            if (parsedInput <= boot.Quantity)
-                                            {
-                                                BaseScript.TriggerServerEvent("core:addItem", boot.Item, parsedInput);
-                                                BaseScript.TriggerServerEvent("core:removeItemFromBoot", plate, boot.Item, parsedInput);
-                                                boot.Quantity -= parsedInput;
-                                                if (boot.Quantity <= 0)
-                                                {
-                                                    bootsToRemove.Add(boot);
-                                                    pick.Remove(item);
-                                                }
-                                                BaseScript.TriggerServerEvent("core:requestPlayerData");
-                                            }
-                                            pick.Visible = false;
-                                        };
-                                    }
+                                            BaseScript.TriggerServerEvent("core:addItemInBoot", plate, item.Item, parsedInput, item.ItemType);
+                                        }
+                                        drop.Visible = false;
+                                    };
                                 }
-                                foreach (BootInfo boot in bootsToRemove)
-                                {
-                                    info.Boot.Remove(boot);
-                                }
+                            }
+                        }
 
-                                var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerMenu.PlayerInst.Inventory);
-                                if (items != null)
+                        foreach (BootInfo boot in Client.MyVehicle.Boot)
+                        {
+                            if (boot.Quantity > 0)
+                            {
+                                var item = new NativeItem($"{boot.Item} ({boot.Quantity})");
+                                pick.Add(item);
+                                item.Activated += async (sender, e) =>
                                 {
-                                    foreach (var item in items)
+                                    var textInput = await Format.GetUserInput("Quantité", "1", 4);
+                                    var parsedInput = int.Parse(textInput);
+                                    if (parsedInput <= boot.Quantity)
                                     {
-                                        if (item != null && item.Item != null)
+                                        BaseScript.TriggerServerEvent("core:removeItemFromBoot", plate, boot.Item, parsedInput);
+                                        if (boot.Quantity <= 0)
                                         {
-                                            if (item.ItemType == "item" && item.Quantity != 0)
-                                            {
-                                                var invItem = new NativeItem($"{item.Item} ({item.Quantity})");
-                                                drop.Add(invItem);
-                                                invItem.Activated += async (sender, e) =>
-                                                {
-                                                    var textInput = await Format.GetUserInput("Quantité", "1", 4);
-                                                    var parsedInput = int.Parse(textInput);
-                                                    if (parsedInput <= item.Quantity)
-                                                    {
-                                                        BaseScript.TriggerServerEvent("core:removeItem", item.Item, parsedInput);
-                                                        BaseScript.TriggerServerEvent("core:addItemInBoot", plate, item.Item, parsedInput, "item");
-                                                        BaseScript.TriggerServerEvent("core:requestPlayerData");
-                                                        BaseScript.TriggerServerEvent("core:getVehicleInfo");
-                                                    }
-                                                    drop.Visible = false;
-                                                };
-                                            } else if (item.ItemType == "weapon" && item.Quantity != 0)
-                                            {
-                                                var invItem = new NativeItem($"{item.Item}");
-                                                drop.Add(invItem);
-                                                invItem.Activated += (sender, e) =>
-                                                {
-                                                    BaseScript.TriggerServerEvent("core:removeItem", item.Item, 1);
-                                                    BaseScript.TriggerServerEvent("core:addItemInBoot", plate, item.Item, 1, "weapon");
-                                                    BaseScript.TriggerServerEvent("core:requestPlayerData");
-                                                    BaseScript.TriggerServerEvent("core:getVehicleInfo");
-                                                    drop.Visible = false;
-                                                };
-                                            }
-                                        
+                                            pick.Remove(item);
                                         }
                                     }
-                                }
-
+                                    pick.Visible = false;
+                                };
                             }
                         }
                     }
@@ -198,12 +165,13 @@ namespace Core.Client
 
         public void VehicleMenu()
         {
-            var menu = new NativeMenu($"{GetVehicleNumberPlateText(GetVehiclePedIsIn(GetPlayerPed(-1), false))}", "Option du véhicule");
+            var vehicle = GetVehiclePedIsIn(PlayerPedId(), false);
+            var menu = new NativeMenu($"{GetVehicleNumberPlateText(vehicle)}", "Option du véhicule");
             Pool.Add(menu);
             menu.Visible = true;
             menu.UseMouse = false;
 
-            var engineHealth = (GetVehicleEngineHealth(GetVehiclePedIsIn(PlayerPedId(), false))) * 100.0 / 5000.0 * 5;
+            var engineHealth = (GetVehicleEngineHealth(vehicle)) * 100.0 / 5000.0 * 5;
             var vehicleStatus = new NativeItem($"Etat du moteur: {String.Format("{0:0.##}", engineHealth)}%");
             menu.Add(vehicleStatus);
 
@@ -217,11 +185,11 @@ namespace Core.Client
                 {
                     if (driftState)
                     {
-                        SetVehicleReduceGrip(GetVehiclePedIsIn(PlayerPedId(), false), true);
+                        SetVehicleReduceGrip(vehicle, true);
                     }
                     else
                     {
-                        SetVehicleReduceGrip(GetVehiclePedIsIn(PlayerPedId(), false), false);
+                        SetVehicleReduceGrip(vehicle, false);
                     }
                 }
                 else
@@ -230,6 +198,21 @@ namespace Core.Client
                 }
             };
 
+            var raceMode = new NativeMenu("Mode course", "Mode course");
+            Pool.Add(raceMode);
+            menu.AddSubMenu(raceMode);
+            raceMode.Add(driftMode);
+
+            var fClutchChangeRateScaleUpShift = GetVehicleHandlingFloat(vehicle, "CHandlingData", "fClutchChangeRateScaleUpShift");
+            var fClutchChangeRateScaleDownShift = GetVehicleHandlingFloat(vehicle, "CHandlingData", "fClutchChangeRateScaleDownShift");
+
+            var changeRateScale = new NativeSliderItem("Vitesse d'embrayage", "", (int)fClutchChangeRateScaleUpShift+1, (int)fClutchChangeRateScaleUpShift);
+            changeRateScale.ValueChanged += (sender, e) =>
+            {
+                // SetVehicleHandlingInt(vehicle, "CHandlingData", "fClutchChangeRateScaleUpShift", changeRateScale.Value);
+                // SetVehicleHandlingInt(vehicle, "CHandlingData", "fClutchChangeRateScaleDownShift", changeRateScale.Value);
+            };
+            raceMode.Add(changeRateScale);
             var doorsItem = new NativeListItem<string>("Ouvrir / Fermer une porte", "", "Avant gauche", "Avant droit", "Arrière gauche", "Arrière droit", "Capot", "Coffre", "Toutes les portes");
             var doors = new List<string>() { "Front Left", "Front Right", "Rear Left", "Rear Right", "Hood", "Trunk" };
             menu.Add(doorsItem);

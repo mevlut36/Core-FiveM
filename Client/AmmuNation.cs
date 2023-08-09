@@ -102,7 +102,6 @@ namespace Core.Client
                                     {
                                         Format.SendNotif($"~g~Vous avez bien acheté {weapon.Key}");
                                         BaseScript.TriggerServerEvent("core:buyWeapon", kvp2.Key.ToString(), kvp2.Value);
-                                        BaseScript.TriggerServerEvent("core:requestPlayerData");
                                     }
                                     else
                                     {
@@ -115,7 +114,7 @@ namespace Core.Client
                         }
                         var ammo = new NativeItem("Munitions", "", "~g~$200");
                         menu.Add(ammo);
-                        var items = JsonConvert.DeserializeObject<List<ItemQuantity>>(PlayerMenu.PlayerInst.Inventory);
+                        var items = PlayerMenu.PlayerInst.Inventory;
                         ammo.Activated += async (sender, e) =>
                         {
                             var textInput = await Format.GetUserInput("Quantité", "1", 4);
@@ -124,9 +123,8 @@ namespace Core.Client
                             if (result <= PlayerMenu.PlayerInst.Money)
                             {
                                 PlayerMenu.PlayerInst.Money -= result;
-                                PlayerMenu.PlayerInst.Inventory = JsonConvert.SerializeObject(items);
+                                PlayerMenu.PlayerInst.Inventory = items;
                                 BaseScript.TriggerServerEvent("core:transaction", result, "Munitions", parsedInput, "item");
-                                BaseScript.TriggerServerEvent("core:requestPlayerData");
                                 menu.Visible = false;
                             }
                             else
