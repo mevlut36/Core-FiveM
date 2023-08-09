@@ -74,16 +74,17 @@ namespace Core.Server
                         Organisation = existingPlayer.Organisation,
                         Bitcoin = existingPlayer.Bitcoin,
                         Birth = existingPlayer.Birth,
+                        Cars = existingPlayer.Cars,
                         Clothes = JsonConvert.DeserializeObject<List<ClothesInfo>>(existingPlayer.Clothes),
                         ClothesList = existingPlayer.ClothesList,
                         Money = existingPlayer.Money,
                         Bills = existingPlayer.Bills,
                         LastPosition = JsonConvert.DeserializeObject<Vector3>(existingPlayer.LastPosition),
-                        Inventory = existingPlayer.Inventory
+                        Inventory = JsonConvert.DeserializeObject<List<ItemQuantity>>(existingPlayer.Inventory)
                     };
 
-                    var json = JsonConvert.SerializeObject(playerInstance);
-                    TriggerClientEvent(player, "core:playerConnected", json);
+                    SendPlayerDataToClientEvents(player, playerInstance);
+                    TriggerClientEvent(player, "core:playerConnected", JsonConvert.SerializeObject(playerInstance));
                 }
                 else
                 {
@@ -126,14 +127,26 @@ namespace Core.Server
                         ClothesList = existingPlayer.ClothesList,
                         Money = existingPlayer.Money,
                         Bills = existingPlayer.Bills,
-                        Inventory = existingPlayer.Inventory
+                        Inventory = JsonConvert.DeserializeObject<List<ItemQuantity>>(existingPlayer.Inventory)
                     };
-
-                    var json = JsonConvert.SerializeObject(playerInstance);
-                    TriggerClientEvent(player, "core:getPlayerData", json);
-                    TriggerClientEvent(player, "legal_client:getPlayerData", json);
-                    TriggerClientEvent(player, "illegal_client:getPlayerData", json);
+                    SendPlayerDataToClientEvents(player, playerInstance);
                 }
+            }
+        }
+
+        private void SendPlayerDataToClientEvents(Player player, PlayerInstance instance)
+        {
+            var json = JsonConvert.SerializeObject(instance);
+            var events = new[]
+            {
+                "core:getPlayerData",
+                "legal_client:getPlayerData",
+                "illegal_client:getPlayerData"
+            };
+
+            foreach (var eventName in events)
+            {
+                TriggerClientEvent(player, eventName, json);
             }
         }
 
@@ -233,7 +246,7 @@ namespace Core.Server
         }
 
         [EventHandler("core:bankRobbery")]
-        public async void BankRobbery([FromSource] Player player, string bankName)
+        public void BankRobbery([FromSource] Player player, string bankName)
         {
             using (var dbContext = new DataContext())
             {
@@ -255,7 +268,7 @@ namespace Core.Server
                     var itemFilterPerceuse = inventory.FirstOrDefault(item => item.Item == "Perceuse");
                     var itemFilterPc = inventory.FirstOrDefault(item => item.Item == "Ordinateur");
                     Random random = new Random();
-                    int randomNumber = random.Next(20000, 30000);
+                    int randomNumber = random.Next(150000, 200000);
 
                     var dollars = new ItemQuantity
                     {
@@ -269,7 +282,6 @@ namespace Core.Server
                         itemFilterPerceuse.Quantity -= 1;
                         itemFilterPc.Quantity -= 1;
 
-                        await Delay(10000);
                         if (itemFilterDollars != null)
                         {
                             itemFilterDollars.Quantity += randomNumber;
@@ -347,7 +359,7 @@ namespace Core.Server
                     Organisation = "aucun",
                     Clothes = data.ClothesList,
                     ClothesList = data.ClothesList,
-                    Money = 20000,
+                    Money = 50000,
                     Birth = data.Birth,
                     Inventory = inventoryJson,
                     Bills = data.Bills,
@@ -470,6 +482,48 @@ namespace Core.Server
                     TriggerClientEvent(player, "core:sendVehicleInfos", json, playerPed);
                 }
             }
+        }
+
+        [EventHandler("core:requestVehicleByPlate")]
+        public void GetVehicleByPlate([FromSource] Player player, string targetPlate)
+        {
+            using (var dbContext = new DataContext())
+            {
+                const int pageSize = 100;
+                int pageNumber = 0;
+                while (true)
+                {
+                    var playersBatch = dbContext.Player
+                                                .Skip(pageNumber * pageSize)
+                                                .Take(pageSize)
+                                                .ToList();
+                    if (!playersBatch.Any())
+                    {
+                        break;
+                    }
+
+                    foreach (var p in playersBatch)
+                    {
+                        var vehicles = JsonConvert.DeserializeObject<List<VehicleInfo>>(p.Cars);
+                        var targetVehicle = vehicles.FirstOrDefault(v => v.Plate == targetPlate);
+                        if (targetVehicle != null)
+                        {
+                            TriggerClientEvent(player, "core:getVehicleByPlate", JsonConvert.SerializeObject(targetVehicle));
+                        } else
+                        {
+                            var newVehicle = new VehicleInfo
+                            {
+                                Boot = new List<BootInfo>(),
+                                Plate = targetPlate,
+                            };
+                            TriggerClientEvent(player, "core:getVehicleByPlate", JsonConvert.SerializeObject(newVehicle));
+                        }
+                    }
+
+                    pageNumber++;
+                }
+
+            } 
         }
 
         [EventHandler("core:showCardId")]
@@ -847,8 +901,6 @@ namespace Core.Server
         public void AddItemInBoot([FromSource] Player player, string plate, string item, int quantity, string type)
         {
             var license = player.Identifiers["license"];
-            var networkId = player.Handle;
-            var playerPed = GetPlayerPed(networkId);
 
             using (var dbContext = new DataContext())
             {
@@ -856,8 +908,8 @@ namespace Core.Server
 
                 if (existingPlayer != null)
                 {
-                    List<VehicleInfo> vehicles = JsonConvert.DeserializeObject<List<VehicleInfo>>(existingPlayer.Cars);
-
+                    var vehicles = JsonConvert.DeserializeObject<List<VehicleInfo>>(existingPlayer.Cars);
+                    var inventory = JsonConvert.DeserializeObject<List<ItemQuantity>>(existingPlayer.Inventory);
                     if (vehicles != null && vehicles.Count > 0)
                     {
                         foreach (VehicleInfo vehicle in vehicles)
@@ -865,11 +917,13 @@ namespace Core.Server
                             if (vehicle.Plate == plate)
                             {
                                 var boot = vehicle.Boot;
+                                var itemBootFilter = boot.FirstOrDefault(i => i.Item == item);
+                                var itemFilter = inventory.FirstOrDefault(i => i.Item == item);
 
-                                var itemFilter = boot.FirstOrDefault(i => i.Item == item);
-                                if (itemFilter != null)
+                                if (itemBootFilter != null)
                                 {
-                                    itemFilter.Quantity += quantity;
+                                    itemBootFilter.Quantity += quantity;
+                                    itemFilter.Quantity -= quantity;
                                     TriggerClientEvent(player, "core:sendNotif", $"Vous avez déposé ~r~{quantity}~w~ de {item}.");
                                 }
                                 else
@@ -889,8 +943,12 @@ namespace Core.Server
                     }
 
                     var updatedCars = JsonConvert.SerializeObject(vehicles);
+                    var updatedInventory = JsonConvert.SerializeObject(inventory);
                     existingPlayer.Cars = updatedCars;
+                    existingPlayer.Inventory = updatedInventory;
                     dbContext.SaveChanges();
+                    GetPlayerData(player);
+                    GetVehicleInfo(player);
                 }
             }
         }
@@ -899,8 +957,6 @@ namespace Core.Server
         public void RemoveItemFromBoot([FromSource] Player player, string plate, string item, int quantity)
         {
             var license = player.Identifiers["license"];
-            var networkId = player.Handle;
-            var playerPed = GetPlayerPed(networkId);
 
             using (var dbContext = new DataContext())
             {
@@ -917,6 +973,8 @@ namespace Core.Server
                             if (vehicle.Plate == plate)
                             {
                                 var boot = vehicle.Boot;
+                                var inventory = JsonConvert.DeserializeObject<List<ItemQuantity>>(existingPlayer.Inventory);
+                                var itemFilter = inventory.FirstOrDefault(i => i.Item == item);
 
                                 if (boot != null && boot.Count > 0)
                                 {
@@ -927,6 +985,7 @@ namespace Core.Server
                                         if (bootItem.Item == item && bootItem.Quantity >= quantity)
                                         {
                                             bootItem.Quantity -= quantity;
+                                            itemFilter.Quantity += quantity;
 
                                             if (bootItem.Quantity <= 0)
                                             {
@@ -944,6 +1003,8 @@ namespace Core.Server
                     var updatedCars = JsonConvert.SerializeObject(vehicles);
                     existingPlayer.Cars = updatedCars;
                     dbContext.SaveChanges();
+                    GetPlayerData(player);
+                    GetVehicleInfo(player);
                 }
             }
         }
@@ -1088,7 +1149,7 @@ namespace Core.Server
                             Bitcoin = existingPlayer.Bitcoin,
                             Money = existingPlayer.Money,
                             Bills = existingPlayer.Bills,
-                            Inventory = existingPlayer.Inventory
+                            Inventory = JsonConvert.DeserializeObject<List<ItemQuantity>>(existingPlayer.Inventory)
                         };
                         playersHandle.Add(player.Handle);
                         playersInstances.Add(playerInstance);
