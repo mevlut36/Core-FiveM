@@ -44,12 +44,10 @@ namespace Core.Server
             new CitizenFX.Core.Vector3(1196.4f, 2711.7f, 38.1f),
             new CitizenFX.Core.Vector3(5.9f, 6511.3f, 31.7f)
         };
-
         public ServerMain()
         {
             Debug.WriteLine("Hi from Core.Server!");
             EventHandlers["core:playerSpawned"] += new Action<Player>(PlayerConnected);
-            EventHandlers["playerDropped"] += new Action<Player>(IsPlayerDisconnecting);
             EventHandlers["core:kick"] += new Action<Player, int, string>(Kick);
         }
 
@@ -419,22 +417,6 @@ namespace Core.Server
             }
         }
 
-        public void IsPlayerDisconnecting([FromSource] Player player)
-        {
-            using (var dbContext = new DataContext())
-            {
-                var license = player.Identifiers["license"];
-                var json = JsonConvert.SerializeObject(player.Character.Position);
-                var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
-                if (existingPlayer != null)
-                {
-                    existingPlayer.LastPosition = json;
-                    dbContext.SaveChanges();
-                    Debug.WriteLine($"{existingPlayer.FirstName} {existingPlayer.LastName} ({player.Name}) disconnected");
-                }
-            }
-        }
-
         [EventHandler("core:sendVehicleInfo")]
         public void SendVehicleInfo([FromSource] Player player, string json)
         {
@@ -717,6 +699,8 @@ namespace Core.Server
                 }
             }
         }
+
+
 
         [EventHandler("core:giveMoney")]
         public void GiveMoney([FromSource] Player player, int amount)
