@@ -239,12 +239,12 @@ namespace Core.Client
                     if (dist < 2 && menu == null)
                     {
                         var parkingList = parking.VehiclesPosition;
-                        menu = PrepareParkingMenu(parkingList);
-
+                        
                         Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir la liste des véhicules");
 
                         if (IsControlPressed(0, 38))
                         {
+                            menu = PrepareParkingMenu(parkingList);
                             menu.Visible = true;
                         }
                     }

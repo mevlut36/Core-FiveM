@@ -160,25 +160,27 @@ namespace Core.Client
 
             foreach (var ped in PedId)
             {
-                if (IsPlayerFreeAimingAtEntity(playerId, ped))
-                {
-                    if (LastRobbery.HasValue && (DateTime.Now - LastRobbery.Value).TotalHours < 1)
+                if (GetSelectedPedWeapon(playerId) != null) {
+                    if (IsPlayerFreeAimingAtEntity(playerId, ped))
                     {
-                        Format.SendNotif("~r~Vous ne pouvez pas braquer encore. Attendez un peu.");
-                        return;
-                    }
+                        if (LastRobbery.HasValue && (DateTime.Now - LastRobbery.Value).TotalHours < 1)
+                        {
+                            Format.SendNotif("~r~Vous ne pouvez pas braquer encore. Attendez un peu.");
+                            return;
+                        }
 
-                    IsRobbing = true;
-                    LastRobbery = DateTime.Now;
-                    Debug.WriteLine($"Robbing ID {ped}");
-                    Format.SendNotif("~r~Braquage en cours...");
-                    var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
-                    uint streetNameHash = 0;
-                    uint crossingRoadHash = 0;
-                    GetStreetNameAtCoord(playerCoords.X, playerCoords.Y, playerCoords.Z, ref streetNameHash, ref crossingRoadHash);
-                    string streetName = GetStreetNameFromHashKey(streetNameHash);
-                    TriggerServerEvent("core:robbery", streetName);
-                    PlaySoundFrontend(-1, "ROBBERY_MONEY_TOTAL", "HUD_FRONTEND_CUSTOM_SOUNDSET", true);
+                        IsRobbing = true;
+                        LastRobbery = DateTime.Now;
+                        Debug.WriteLine($"Robbing ID {ped}");
+                        Format.SendNotif("~r~Braquage en cours...");
+                        var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
+                        uint streetNameHash = 0;
+                        uint crossingRoadHash = 0;
+                        GetStreetNameAtCoord(playerCoords.X, playerCoords.Y, playerCoords.Z, ref streetNameHash, ref crossingRoadHash);
+                        string streetName = GetStreetNameFromHashKey(streetNameHash);
+                        TriggerServerEvent("core:robbery", streetName);
+                        PlaySoundFrontend(-1, "ROBBERY_MONEY_TOTAL", "HUD_FRONTEND_CUSTOM_SOUNDSET", true);
+                    }
                 }
             }
         }
@@ -255,6 +257,11 @@ namespace Core.Client
                 if (vehicles != null && vehicles.Count > 0)
                 {
                     Parking.CarList = vehicles;
+                }
+                var job = JsonConvert.DeserializeObject<JobInfo>(PlayerMenu.PlayerInst.Job);
+                if (job.JobID != null)
+                {
+                    TriggerServerEvent("legal_server:requestCompanyData", job.JobID);
                 }
             }
             catch (JsonSerializationException ex)

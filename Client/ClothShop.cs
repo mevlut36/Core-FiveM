@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Core.Shared;
 using static CitizenFX.Core.Native.API;
+using System.ComponentModel;
 
 namespace Core.Client
 {
@@ -78,6 +79,465 @@ namespace Core.Client
                 SetEntityInvincible(ped.Result.Handle, true);
                 SetBlockingOfNonTemporaryEvents(ped.Result.Handle, true);
                 Client.PedId.Add(ped.Result.Handle);
+            }
+        }
+
+
+        public void NewClothMenu()
+        {
+            var playerCoords = GetEntityCoords(PlayerPedId(), true);
+
+            foreach (var cloth in ClothShopList)
+            {
+                var distance = playerCoords.DistanceToSquared(cloth.Checkout);
+                if (distance < 8)
+                {
+                    Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir");
+
+                    if (IsControlJustPressed(0, 38))
+                    {
+                        var menu = new NativeMenu("Magasin de vêtements", $"Magasin - {cloth.ShopName}")
+                        {
+                            UseMouse = false,
+                            HeldTime = 100
+                        };
+                        Pool.Add(menu);
+                        menu.Visible = true;
+
+                        menu.Closed += (sender, e) =>
+                        {
+                            BaseScript.TriggerServerEvent("core:setClothes");
+                        };
+
+                        var hat = new NativeMenu("Chapeaux, casquettes, bérets", "Chapeaux")
+                        {
+                            UseMouse = false,
+                            HeldTime = 100
+                        };
+                        Pool.Add(hat);
+                        menu.AddSubMenu(hat);
+
+                        var hatsList = Enumerable.Range(0, GetNumberOfPedPropDrawableVariations(GetPlayerPed(-1), 0)).ToList();
+                        NativeListItem<int> itemsHat = new NativeListItem<int>("~h~Chapeaux~s~", hatsList.ToArray());
+                        hat.Add(itemsHat);
+
+                        var hatsTextureList = Enumerable.Range(0, GetNumberOfPedPropTextureVariations(GetPlayerPed(-1), 0, itemsHat.SelectedIndex)).ToList();
+                        NativeListItem<int> itemHatTexture = new NativeListItem<int>($"Style", hatsTextureList.ToArray());
+                        hat.Add(itemHatTexture);
+
+                        itemsHat.ItemChanged += (sender, e) =>
+                        {
+                            SetPedPropIndex(GetPlayerPed(-1), 0, itemsHat.SelectedIndex, 0, false);
+                            itemHatTexture.SelectedIndex = 0;
+                        };
+
+                        itemHatTexture.ItemChanged += (sender, e) =>
+                        {
+                            SetPedPropIndex(GetPlayerPed(-1), 0, itemsHat.SelectedIndex, itemHatTexture.SelectedIndex, false);
+                        };
+
+                        var hatSubmit = new NativeItem("Acheter", "", "~g~250$");
+                        hat.Add(hatSubmit);
+
+                        hatSubmit.Activated += async (sender, e) =>
+                        {
+                            if (PlayerMenu.PlayerInst.Money >= 250)
+                            {
+                                var textInput = await Format.GetUserInput("Donnez un nom", "Chapeau", 12);
+
+                                var clothingSet = new ClothingSet
+                                {
+                                    Name = textInput
+                                };
+
+                                clothingSet.Components.Add(new ClothesComponent(0)  // Hat
+                                {
+                                    Drawable = itemsHat.SelectedIndex,
+                                    Texture = itemHatTexture.SelectedIndex,
+                                    Palette = 0
+                                });
+
+                                var json = JsonConvert.SerializeObject(clothingSet);
+                                BaseScript.TriggerServerEvent("core:buyTopClothes", 250, json);
+                            }
+                        };
+
+                        var top = new NativeMenu("Sous-haut, haut, bras", "Haut")
+                        {
+                            UseMouse = false,
+                            HeldTime = 100
+                        };
+                        Pool.Add(top);
+                        menu.AddSubMenu(top);
+
+                        // UNDERSHIRT
+                        var undershirtList = Enumerable.Range(0, GetNumberOfPedDrawableVariations(GetPlayerPed(-1), 8)).ToList();
+                        NativeListItem<int> undershirts = new NativeListItem<int>("~h~Sous haut~s~", undershirtList.ToArray());
+                        top.Add(undershirts);
+
+                        var undershirtsTextureList = Enumerable.Range(0, GetNumberOfPedTextureVariations(GetPlayerPed(-1), 8, undershirts.SelectedIndex)).ToList();
+                        NativeListItem<int> undershirtsTexture = new NativeListItem<int>("Style", undershirtsTextureList.ToArray());
+                        top.Add(undershirtsTexture);
+
+                        undershirts.ItemChanged += (sender, e) =>
+                        {
+                            SetPedComponentVariation(GetPlayerPed(-1), 8, undershirts.SelectedIndex, 0, 1);
+                            undershirtsTexture.SelectedIndex = 0;
+                        };
+
+                        undershirtsTexture.ItemChanged += (sender, e) =>
+                        {
+                            SetPedComponentVariation(GetPlayerPed(-1), 8, undershirts.SelectedIndex, undershirtsTexture.SelectedIndex, 1);
+                        };
+
+                        // ARMS
+                        var armsList = Enumerable.Range(0, GetNumberOfPedDrawableVariations(GetPlayerPed(-1), 3)).ToList();
+                        NativeListItem<int> arms = new NativeListItem<int>("~h~Bras~s~", armsList.ToArray());
+                        top.Add(arms);
+
+                        var armsTextureList = Enumerable.Range(0, GetNumberOfPedTextureVariations(GetPlayerPed(-1), 3, arms.SelectedIndex)).ToList();
+                        NativeListItem<int> armsTexture = new NativeListItem<int>("Style", armsTextureList.ToArray());
+                        top.Add(armsTexture);
+
+                        arms.ItemChanged += (sender, e) =>
+                        {
+                            SetPedComponentVariation(GetPlayerPed(-1), 3, arms.SelectedIndex, 0, 1);
+                            armsTexture.SelectedIndex = 0;
+                        };
+
+                        armsTexture.ItemChanged += (sender, e) =>
+                        {
+                            SetPedComponentVariation(GetPlayerPed(-1), 3, arms.SelectedIndex, armsTexture.SelectedIndex, 1);
+                        };
+
+                        // TOP
+                        var topsList = Enumerable.Range(0, GetNumberOfPedDrawableVariations(GetPlayerPed(-1), 11)).ToList();
+                        NativeListItem<int> tops = new NativeListItem<int>("~h~Haut~s~", topsList.ToArray());
+                        top.Add(tops);
+
+                        var topsTextureList = Enumerable.Range(0, GetNumberOfPedTextureVariations(GetPlayerPed(-1), 11, tops.SelectedIndex)).ToList();
+                        NativeListItem<int> topsTexture = new NativeListItem<int>("Style", topsTextureList.ToArray());
+                        top.Add(topsTexture);
+
+                        tops.ItemChanged += (sender, e) =>
+                        {
+                            SetPedComponentVariation(GetPlayerPed(-1), 11, tops.SelectedIndex, 0, 1);
+                            topsTexture.SelectedIndex = 0;
+                        };
+
+                        topsTexture.ItemChanged += (sender, e) =>
+                        {
+                            SetPedComponentVariation(GetPlayerPed(-1), 11, tops.SelectedIndex, topsTexture.SelectedIndex, 1);
+                        };
+
+                        var topSubmit = new NativeItem("Acheter", "", "~g~250$");
+                        top.Add(topSubmit);
+
+                        topSubmit.Activated += async (sender, e) =>
+                        {
+                            if (PlayerMenu.PlayerInst.Money >= 250)
+                            {
+                                var textInput = await Format.GetUserInput("Donnez un nom", "Habit", 12);
+
+                                var clothingSet = new ClothingSet
+                                {
+                                    Name = textInput
+                                };
+
+                                clothingSet.Components.Add(new ClothesComponent(8)  // Undershirt
+                                {
+                                    Drawable = undershirts.SelectedIndex,
+                                    Texture = undershirtsTexture.SelectedIndex,
+                                    Palette = 1
+                                });
+
+                                clothingSet.Components.Add(new ClothesComponent(3)  // Torso
+                                {
+                                    Drawable = arms.SelectedIndex,
+                                    Texture = armsTexture.SelectedIndex,
+                                    Palette = 1
+                                });
+
+                                clothingSet.Components.Add(new ClothesComponent(11)  // Top
+                                {
+                                    Drawable = tops.SelectedIndex,
+                                    Texture = topsTexture.SelectedIndex,
+                                    Palette = 1
+                                });
+
+                                var json = JsonConvert.SerializeObject(clothingSet);
+                                BaseScript.TriggerServerEvent("core:buyTopClothes", 250, json);
+                            }
+                        };
+
+
+
+                        var legs = new NativeMenu("Bas", "Bas")
+                        {
+                            UseMouse = false,
+                            HeldTime = 100
+                        };
+                        Pool.Add(legs);
+                        menu.AddSubMenu(legs);
+
+                        var legsList = Enumerable.Range(0, GetNumberOfPedDrawableVariations(GetPlayerPed(-1), 4)).ToList();
+                        NativeListItem<int> legsItem = new NativeListItem<int>("~h~Bas~s~", legsList.ToArray());
+                        legs.Add(legsItem);
+
+                        var legsTextureList = Enumerable.Range(0, GetNumberOfPedTextureVariations(GetPlayerPed(-1), 4, legsItem.SelectedIndex)).ToList();
+                        NativeListItem<int> legsTexture = new NativeListItem<int>("Style", legsTextureList.ToArray());
+                        legs.Add(legsTexture);
+
+                        legsItem.ItemChanged += (sender, e) =>
+                        {
+                            SetPedComponentVariation(GetPlayerPed(-1), 4, legsItem.SelectedIndex, 0, 1);
+                            legsTexture.SelectedIndex = 0;
+                        };
+
+                        legsTexture.ItemChanged += (sender, e) =>
+                        {
+                            SetPedComponentVariation(GetPlayerPed(-1), 4, legsItem.SelectedIndex, legsTexture.SelectedIndex, 1);
+                        };
+
+                        var legsSubmit = new NativeItem("Acheter", "", "~g~250$");
+                        legs.Add(legsSubmit);
+
+                        legsSubmit.Activated += async (sender, e) =>
+                        {
+                            if (PlayerMenu.PlayerInst.Money >= 250)
+                            {
+                                var textInput = await Format.GetUserInput("Donnez un nom", "Habit", 12);
+
+                                var clothingSet = new ClothingSet
+                                {
+                                    Name = textInput
+                                };
+
+                                clothingSet.Components.Add(new ClothesComponent(4)  // Legs
+                                {
+                                    Drawable = legsItem.SelectedIndex,
+                                    Texture = legsTexture.SelectedIndex,
+                                    Palette = 1
+                                });
+
+                                var json = JsonConvert.SerializeObject(clothingSet);
+                                BaseScript.TriggerServerEvent("core:buyTopClothes", 250, json);
+                            }
+                        };
+
+                        var shoes = new NativeMenu("Chaussures", "Chaussures")
+                        {
+                            UseMouse = false,
+                            HeldTime = 100
+                        };
+                        Pool.Add(shoes);
+                        menu.AddSubMenu(shoes);
+
+                        var shoesList = Enumerable.Range(0, GetNumberOfPedDrawableVariations(GetPlayerPed(-1), 6)).ToList();
+                        NativeListItem<int> shoesItem = new NativeListItem<int>("~h~Chaussures~s~", shoesList.ToArray());
+                        shoes.Add(shoesItem);
+
+                        var shoesTextureList = Enumerable.Range(0, GetNumberOfPedTextureVariations(GetPlayerPed(-1), 6, shoesItem.SelectedIndex)).ToList();
+                        NativeListItem<int> shoesTexture = new NativeListItem<int>("Style", shoesTextureList.ToArray());
+                        shoes.Add(shoesTexture);
+
+                        shoesItem.ItemChanged += (sender, e) =>
+                        {
+                            SetPedComponentVariation(GetPlayerPed(-1), 6, shoesItem.SelectedIndex, 0, 1);
+                            shoesTexture.SelectedIndex = 0;
+                        };
+
+                        shoesTexture.ItemChanged += (sender, e) =>
+                        {
+                            SetPedComponentVariation(GetPlayerPed(-1), 6, shoesItem.SelectedIndex, shoesTexture.SelectedIndex, 1);
+                        };
+
+                        var shoesSubmit = new NativeItem("Acheter", "", "~g~250$");
+                        shoes.Add(shoesSubmit);
+
+                        shoesItem.Activated += async (sender, e) =>
+                        {
+                            if (PlayerMenu.PlayerInst.Money >= 250)
+                            {
+                                var textInput = await Format.GetUserInput("Donnez un nom", "Habit", 12);
+
+                                var clothingSet = new ClothingSet
+                                {
+                                    Name = textInput
+                                };
+
+                                clothingSet.Components.Add(new ClothesComponent(6)  // Shoes
+                                {
+                                    Drawable = shoesItem.SelectedIndex,
+                                    Texture = shoesTexture.SelectedIndex,
+                                    Palette = 1
+                                });
+
+                                var json = JsonConvert.SerializeObject(clothingSet);
+                                BaseScript.TriggerServerEvent("core:buyTopClothes", 250, json);
+                            }
+                        };
+
+                        var glasses = new NativeMenu("Lunettes", "Lunettes")
+                        {
+                            UseMouse = false,
+                            HeldTime = 100
+                        };
+                        Pool.Add(glasses);
+                        menu.AddSubMenu(glasses);
+
+                        var glassesList = Enumerable.Range(0, GetNumberOfPedPropDrawableVariations(GetPlayerPed(-1), 1)).ToList();
+                        NativeListItem<int> itemsGlasses = new NativeListItem<int>("\"~h~Chapeaux~s~", glassesList.ToArray());
+                        glasses.Add(itemsGlasses);
+
+                        var glassesTextureList = Enumerable.Range(0, GetNumberOfPedPropTextureVariations(GetPlayerPed(-1), 1, itemsGlasses.SelectedIndex)).ToList();
+                        NativeListItem<int> itemGlassesTexture = new NativeListItem<int>($"Style", glassesTextureList.ToArray());
+                        glasses.Add(itemGlassesTexture);
+
+                        itemsGlasses.ItemChanged += (sender, e) =>
+                        {
+                            SetPedPropIndex(GetPlayerPed(-1), 1, itemsGlasses.SelectedIndex, 0, false);
+                            itemGlassesTexture.SelectedIndex = 0;
+                        };
+
+                        itemGlassesTexture.ItemChanged += (sender, e) =>
+                        {
+                            SetPedPropIndex(GetPlayerPed(-1), 1, itemsGlasses.SelectedIndex, itemGlassesTexture.SelectedIndex, false);
+                        };
+
+                        var glassesSubmit = new NativeItem("Acheter", "", "~g~250$");
+                        glasses.Add(glassesSubmit);
+
+                        glassesSubmit.Activated += async (sender, e) =>
+                        {
+                            if (PlayerMenu.PlayerInst.Money >= 250)
+                            {
+                                var textInput = await Format.GetUserInput("Donnez un nom", "Lunette", 12);
+
+                                var clothingSet = new ClothingSet
+                                {
+                                    Name = textInput
+                                };
+
+                                clothingSet.Components.Add(new ClothesComponent(1)  // Glasses
+                                {
+                                    Drawable = itemsGlasses.SelectedIndex,
+                                    Texture = itemGlassesTexture.SelectedIndex,
+                                    Palette = 0
+                                });
+
+                                var json = JsonConvert.SerializeObject(clothingSet);
+                                BaseScript.TriggerServerEvent("core:buyTopClothes", 250, json);
+                            }
+                        };
+
+                        var watches = new NativeMenu("Montres", "Montres")
+                        {
+                            UseMouse = false,
+                            HeldTime = 100
+                        };
+                        Pool.Add(watches);
+                        menu.AddSubMenu(watches);
+
+                        var watchesList = Enumerable.Range(0, GetNumberOfPedPropDrawableVariations(GetPlayerPed(-1), 6)).ToList();
+                        NativeListItem<int> itemsWatches = new NativeListItem<int>("\"~h~Chapeaux~s~", watchesList.ToArray());
+                        watches.Add(itemsWatches);
+
+                        var watchesTextureList = Enumerable.Range(0, GetNumberOfPedPropTextureVariations(GetPlayerPed(-1), 6, itemsWatches.SelectedIndex)).ToList();
+                        NativeListItem<int> itemWatchesTexture = new NativeListItem<int>($"Style", watchesTextureList.ToArray());
+                        watches.Add(itemWatchesTexture);
+
+                        itemsWatches.ItemChanged += (sender, e) =>
+                        {
+                            SetPedPropIndex(GetPlayerPed(-1), 6, itemsWatches.SelectedIndex, 0, false);
+                            itemWatchesTexture.SelectedIndex = 0;
+                        };
+
+                        itemWatchesTexture.ItemChanged += (sender, e) =>
+                        {
+                            SetPedPropIndex(GetPlayerPed(-1), 6, itemsWatches.SelectedIndex, itemWatchesTexture.SelectedIndex, false);
+                        };
+
+                        var watchSubmit = new NativeItem("Acheter", "", "~g~250$");
+                        watches.Add(watchSubmit);
+
+                        watchSubmit.Activated += async (sender, e) =>
+                        {
+                            if (PlayerMenu.PlayerInst.Money >= 250)
+                            {
+                                var textInput = await Format.GetUserInput("Donnez un nom", "Montre", 12);
+
+                                var clothingSet = new ClothingSet
+                                {
+                                    Name = textInput
+                                };
+
+                                clothingSet.Components.Add(new ClothesComponent(6)  // Watches
+                                {
+                                    Drawable = itemsWatches.SelectedIndex,
+                                    Texture = itemWatchesTexture.SelectedIndex,
+                                    Palette = 0
+                                });
+
+                                var json = JsonConvert.SerializeObject(clothingSet);
+                                BaseScript.TriggerServerEvent("core:buyTopClothes", 250, json);
+                            }
+                        };
+
+                        var masks = new NativeMenu("Masques", "Masques")
+                        {
+                            UseMouse = false,
+                            HeldTime = 100
+                        };
+                        Pool.Add(masks);
+                        menu.AddSubMenu(masks);
+
+                        var masksList = Enumerable.Range(0, GetNumberOfPedDrawableVariations(GetPlayerPed(-1), 1)).ToList();
+                        NativeListItem<int> masksItem = new NativeListItem<int>("~h~Masque~s~", masksList.ToArray());
+                        masks.Add(masksItem);
+
+                        var masksTextureList = Enumerable.Range(0, GetNumberOfPedTextureVariations(GetPlayerPed(-1), 1, masksItem.SelectedIndex)).ToList();
+                        NativeListItem<int> masksTexture = new NativeListItem<int>("Style", masksTextureList.ToArray());
+                        masks.Add(masksTexture);
+
+                        masksItem.ItemChanged += (sender, e) =>
+                        {
+                            SetPedComponentVariation(GetPlayerPed(-1), 1, masksItem.SelectedIndex, 0, 1);
+                            masksTexture.SelectedIndex = 0;
+                        };
+
+                        masksTexture.ItemChanged += (sender, e) =>
+                        {
+                            SetPedComponentVariation(GetPlayerPed(-1), 1, masksItem.SelectedIndex, masksTexture.SelectedIndex, 1);
+                        };
+
+                        var masksSubmit = new NativeItem("Acheter", "", "~g~250$");
+                        masks.Add(masksSubmit);
+
+                        masksItem.Activated += async (sender, e) =>
+                        {
+                            if (PlayerMenu.PlayerInst.Money >= 250)
+                            {
+                                var textInput = await Format.GetUserInput("Donnez un nom", "Habit", 12);
+
+                                var clothingSet = new ClothingSet
+                                {
+                                    Name = textInput
+                                };
+
+                                clothingSet.Components.Add(new ClothesComponent(1)  // masks
+                                {
+                                    Drawable = masksItem.SelectedIndex,
+                                    Texture = masksTexture.SelectedIndex,
+                                    Palette = 1
+                                });
+
+                                var json = JsonConvert.SerializeObject(clothingSet);
+                                BaseScript.TriggerServerEvent("core:buyTopClothes", 250, json);
+                            }
+                        };
+                    }
+                }
             }
         }
 
@@ -184,7 +644,8 @@ namespace Core.Client
 
         public void OnTick()
         {
-            ClothMenu();
+            NewClothMenu();
+            // ClothMenu();
         }
     }
 }

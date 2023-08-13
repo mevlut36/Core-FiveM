@@ -21,6 +21,9 @@ namespace Core.Client
 
             TeleportInfo Bahamas = new TeleportInfo(new Vector3(-1388.6f, -586.4f, 30.2f), new Vector3(-1387.2f, -588.4f, 30f));
             Teleports.Add(Bahamas);
+            
+            TeleportInfo BahamasReception = new TeleportInfo(new Vector3(-1389.4f, -610.8f, 29.6f), new Vector3(-1385.4f, -606.7f, 29.6f));
+            Teleports.Add(BahamasReception);
 
             TeleportInfo GarageDrift = new TeleportInfo(new Vector3(259.7f, -783, 30.0f), new Vector3(-2214.1f, 1072.7f, -23.8f));
             Teleports.Add(GarageDrift);
@@ -36,6 +39,9 @@ namespace Core.Client
             
             TeleportInfo Casino = new TeleportInfo(new Vector3(935.5f, 46.6f, 80.4f), new Vector3(1089.9f, 206.3f, -49.5f));
             Teleports.Add(Casino);
+            
+            TeleportInfo CasinoReception = new TeleportInfo(new Vector3(1120.8f, 214.6f, -49.9f), new Vector3(1121, 222.1f, -49.9f));
+            Teleports.Add(CasinoReception);
             
             TeleportInfo DriftParking = new TeleportInfo(new Vector3(-2153.5f, 1105.6f, -24.4f), new Vector3(-2142, 1106.1f, -25.5f));
             Teleports.Add(DriftParking);

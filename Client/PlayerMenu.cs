@@ -215,6 +215,7 @@ namespace Core.Client
                         Client.IsDead = false;
                         SetEntityHealth(GetPlayerPed(-1), 200);
                         ClearPedTasksImmediately(GetPlayerPed(-1));
+                        SetEntityInvincible(closestPed.Handle, false);
                     };
 
                     var car = new NativeItem("Spawn car", "Faire apparaître un véhicule");
@@ -391,40 +392,53 @@ namespace Core.Client
                             }
                         }
                     }
-                    
-                    var clothesInfo = JsonConvert.DeserializeObject<List<ClothesInfo>>(PlayerInst.ClothesList);
+
+                    var clothesInfo = JsonConvert.DeserializeObject<List<ClothingSet>>(PlayerInst.ClothesList);
                     if (clothesInfo != null)
                     {
-                        foreach (var clothes in clothesInfo)
+                        foreach (var clothesSet in clothesInfo)
                         {
-                            if (clothes.Name != null)
+                            if (clothesSet.Name != null)
                             {
-                                var clotheItem = new NativeListItem<string>($"{clothes.Name}", "", "Porter", "Enlever");
+                                var clotheItem = new NativeListItem<string>($"{clothesSet.Name}", "", "Porter", "Enlever");
                                 clothMenu.Add(clotheItem);
                                 clotheItem.Activated += (sender, e) =>
                                 {
                                     if (clotheItem.SelectedItem == "Porter")
                                     {
-                                        SetPedComponentVariation(GetPlayerPed(-1), clothes.Component, clothes.Drawable, clothes.Texture, clothes.Palette);
-                                        var clothesJson = JsonConvert.SerializeObject(new ClothesInfo
+                                        foreach (var component in clothesSet.Components)
                                         {
-                                            Component = clothes.Component,
-                                            Drawable = clothes.Drawable,
-                                            Texture = clothes.Texture,
-                                            Palette = clothes.Palette
-                                        });
+                                            if (component.Palette == 1)
+                                            {
+                                                SetPedComponentVariation(GetPlayerPed(-1), component.ComponentId, component.Drawable, component.Texture, component.Palette);
+                                            } else
+                                            {
+                                                SetPedPropIndex(GetPlayerPed(-1), component.ComponentId, component.Drawable, component.Texture, false);
+                                            }
+                                        }
 
+                                        var clothesJson = JsonConvert.SerializeObject(clothesSet);
                                         BaseScript.TriggerServerEvent("core:updateClothe", clothesJson);
                                     }
                                     else
                                     {
-                                        SetPedComponentVariation(GetPlayerPed(-1), clothes.Component, 15, 0, 2);
+                                        foreach (var component in clothesSet.Components)
+                                        {
+                                            if (component.Palette == 1)
+                                            {
+                                                SetPedComponentVariation(GetPlayerPed(-1), component.ComponentId, 15, 0, 2);
+                                            } else
+                                            {
+                                                SetPedPropIndex(GetPlayerPed(-1), component.ComponentId, 8, 0, false);
+                                            } 
+                                        }
                                     }
                                 };
                             }
                         }
                     }
-                    
+
+
                     var bills = JsonConvert.DeserializeObject<List<Bills>>(PlayerInst.Bills);
                     if (bills != null)
                     {
