@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using static CitizenFX.Core.Native.API;
 using Core.Shared;
 using System.Diagnostics;
+using Newtonsoft.Json;
 
 namespace Core.Client
 {
@@ -237,7 +238,9 @@ namespace Core.Client
                         var vehicleHash = GetHashKey(vehicleName);
                         // todo
                         // SetVehicleHandlingFloat(vehicleHash, "CHandlingData", "nMonetaryValue", 100000);
-                        var vehicleItem = new NativeItem(vehicleName, $"Acheter {vehicleName}", $"{GetVehicleModelMonetaryValue(vehicleHash)}");
+                        var vehicleItem = new NativeItem(vehicleName,
+                            $"{SendNuiMessage(JsonConvert.SerializeObject(new { action = "SHOW_VEHICLE", name = char.ToUpper(vehicleName[0]) + vehicleName.Substring(1) }))}",
+                            $"{GetVehicleModelMonetaryValue(vehicleHash)}");
                         classMenu.Add(vehicleItem);
 
                         vehicleItem.Activated += (sender, args) =>

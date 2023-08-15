@@ -49,6 +49,7 @@ namespace Core.Client
             EventHandlers["onClientResourceStart"] += new Action<string>(OnClientStart);
             EventHandlers["core:setHealth"] += new Action<int>(SetHealth);
             EventHandlers["core:cuffPlayer"] += new Action<bool>(SetCuff);
+            EventHandlers["core:playerConnected"] += new Action<string>(PlayerConnected);
             EventHandlers["baseevents:onPlayerKilled"] += new Action<dynamic>(async dyn =>
             {
                 var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
@@ -212,7 +213,6 @@ namespace Core.Client
             // UpdatePlayer();
         }
 
-        [EventHandler("core:playerConnected")]
         public async void PlayerConnected(string json)
         {
             try
@@ -221,7 +221,11 @@ namespace Core.Client
                 PlayerMenu.PlayerInst = player;
                 var skin = JsonConvert.DeserializeObject<SkinInfo>(PlayerMenu.PlayerInst.Skin);
                 var ped = GetPlayerPed(-1);
-                var pedHash = skin.Gender == "Femme" ? PedHash.FreemodeFemale01 : PedHash.FreemodeMale01;
+                PedHash pedHash = PedHash.FreemodeMale01;
+                if (skin.Gender == "Femme")
+                {
+                    pedHash = PedHash.FreemodeFemale01;
+                }
                 var model = new Model(pedHash);
                 RequestModel(model);
                 while (!model.IsLoaded)
@@ -235,13 +239,29 @@ namespace Core.Client
                 }
                 
                 Format.SendNotif($"~g~Bienvenue ~w~{player.Firstname}");
-                foreach (var clothes in player.Clothes)
+
+                if (player.Clothes != null)
                 {
-                    if (!string.IsNullOrEmpty(clothes.Name))
+                    foreach (var clothes in player.Clothes)
                     {
-                        SetPedComponentVariation(GetPlayerPed(-1), clothes.Component, clothes.Drawable, clothes.Texture, 0);
+                        if (clothes.Components != null)
+                        {
+                            foreach (var component in clothes.Components)
+                            {
+                                if (component.Palette == 1)
+                                {
+                                    SetPedComponentVariation(GetPlayerPed(-1), component.ComponentId, component.Drawable, component.Texture, 0);
+                                }
+                                else
+                                {
+                                    SetPedPropIndex(GetPlayerPed(-1), component.ComponentId, component.Drawable, component.Texture, false);
+                                }
+
+                            }
+                        }
                     }
-                }
+                } 
+                
                 SetPedComponentVariation(LocalPlayer.Character.Handle, 2, skin.Hair, skin.HairColor, 0);
                 SetPedHairColor(LocalPlayer.Character.Handle, skin.HairColor, 1);
                 SetPedHeadBlendData(LocalPlayer.Character.Handle, skin.Mom, skin.Dad, skin.Dad, skin.Mom, skin.Dad, skin.Dad, skin.DadMomPercent * 0.1f, skin.DadMomPercent * 0.1f, 1.0f, false);
@@ -259,7 +279,7 @@ namespace Core.Client
                     Parking.CarList = vehicles;
                 }
                 var job = JsonConvert.DeserializeObject<JobInfo>(PlayerMenu.PlayerInst.Job);
-                if (job.JobID != null)
+                if (job.JobID != "0")
                 {
                     TriggerServerEvent("legal_server:requestCompanyData", job.JobID);
                 }

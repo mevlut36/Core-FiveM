@@ -198,21 +198,6 @@ namespace Core.Client
                 }
             };
 
-            var raceMode = new NativeMenu("Mode course", "Mode course");
-            Pool.Add(raceMode);
-            menu.AddSubMenu(raceMode);
-            raceMode.Add(driftMode);
-
-            var fClutchChangeRateScaleUpShift = GetVehicleHandlingFloat(vehicle, "CHandlingData", "fClutchChangeRateScaleUpShift");
-            var fClutchChangeRateScaleDownShift = GetVehicleHandlingFloat(vehicle, "CHandlingData", "fClutchChangeRateScaleDownShift");
-
-            var changeRateScale = new NativeSliderItem("Vitesse d'embrayage", "", (int)fClutchChangeRateScaleUpShift+1, (int)fClutchChangeRateScaleUpShift);
-            changeRateScale.ValueChanged += (sender, e) =>
-            {
-                // SetVehicleHandlingInt(vehicle, "CHandlingData", "fClutchChangeRateScaleUpShift", changeRateScale.Value);
-                // SetVehicleHandlingInt(vehicle, "CHandlingData", "fClutchChangeRateScaleDownShift", changeRateScale.Value);
-            };
-            raceMode.Add(changeRateScale);
             var doorsItem = new NativeListItem<string>("Ouvrir / Fermer une porte", "", "Avant gauche", "Avant droit", "Arrière gauche", "Arrière droit", "Capot", "Coffre", "Toutes les portes");
             var doors = new List<string>() { "Front Left", "Front Right", "Rear Left", "Rear Right", "Hood", "Trunk" };
             menu.Add(doorsItem);
@@ -263,26 +248,36 @@ namespace Core.Client
                 }
             };
 
+            var limiter = new NativeListItem<int>("Limiteur de vitesse (km/h)", 999999, 130, 110, 90, 50);
+            menu.Add(limiter);
+
+            limiter.ItemChanged += (sender, e) =>
+            {
+                SetVehicleMaxSpeed(vehicle, limiter.SelectedItem/3.6f);
+            };
         }
 
         public void OnTick()
         {
+
             if (IsPedInAnyVehicle(GetPlayerPed(-1), false))
             {
-                var seatList = new List<int> { 157, 158, 160, 164 };
-                for (int i = 0; i < seatList.Count; i++)
+                var vehicle = GetVehiclePedIsIn(GetPlayerPed(-1), false);
+                var maxSeat = GetVehicleMaxNumberOfPassengers(vehicle) + 1;
+                var controls = new List<int> { 157, 158, 160, 164, 165, 159, 161, 162 };
+                for (int i = -1; i < maxSeat - 1; i++)
                 {
-                    if (IsControlJustPressed(0, seatList[i]))
+                    if (IsControlJustPressed(0, controls[i + 1]))
                     {
-                        SetPedIntoVehicle(GetPlayerPed(-1), GetVehiclePedIsIn(GetPlayerPed(-1), false), i);
+                        TaskWarpPedIntoVehicle(GetPlayerPed(-1), vehicle, i);
                     }
                 }
-
                 if (IsControlJustPressed(0, 80))
                 {
                     VehicleMenu();
                 }
             }
+
             var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
             var closestVehicle = World.GetClosest(playerCoords, World.GetAllVehicles());
             if (closestVehicle != null && GetDistanceBetweenCoords(playerCoords.X, playerCoords.Y, playerCoords.Z, closestVehicle.Position.X, closestVehicle.Position.Y, closestVehicle.Position.Z, true) < 10)
