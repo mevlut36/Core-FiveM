@@ -103,7 +103,7 @@ namespace Core.Client
                                 }
                                 else
                                 {
-                                    Format.SendNotif("~r~La somme est trop élevé");
+                                    Format.ShowAdvancedNotification("ShurikenRP", "Bank Sys.", "~r~La somme est trop élevé");
                                 }
                             }
                             else if (actionBank.SelectedItem == "~g~<b>Déposer</b>")
@@ -115,7 +115,7 @@ namespace Core.Client
                                 }
                                 else
                                 {
-                                    Format.SendNotif("~r~La somme est trop élevé");
+                                    Format.ShowAdvancedNotification("ShurikenRP", "Bank Sys.", "~r~La somme est trop élevé");
                                 }
                             }
 
@@ -171,7 +171,7 @@ namespace Core.Client
 
                             if (pc.Quantity > 0 && drill.Quantity > 0)
                             {
-                                Format.SendNotif("~r~Braquage en cours...");
+                                Format.ShowAdvancedNotification("ShurikenRP", "Bank Sys.", "~r~Braquage en cours...");
                                 Format.PlayAnimation("missbigscore2aswitch", "switch_mic_car_fra_laptop_hacker", 8, (AnimationFlags)50);
                                 await Format.AddPropToPlayer("hei_prop_hst_laptop", 28422, 0, 0, 0, 0, 0, 0, 5000);
                                 Format.StopAnimation("missbigscore2aswitch", "switch_mic_car_fra_laptop_hacker");
@@ -186,7 +186,7 @@ namespace Core.Client
                                 BaseScript.TriggerServerEvent("core:bankRobbery", streetName);
                             } else
                             {
-                                Format.SendNotif("Vous n'avez pas les outils nécessaires");
+                                Format.ShowAdvancedNotification("ShurikenRP", "Bank Sys.", "Vous n'avez pas les outils nécessaires");
                             }
                             menu.Visible = false;
                             Pool.Remove(menu);

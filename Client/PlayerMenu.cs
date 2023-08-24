@@ -11,6 +11,7 @@ using Mono.CSharp;
 using Newtonsoft.Json;
 using static CitizenFX.Core.Native.API;
 using Core.Shared;
+using System.Threading;
 
 namespace Core.Client
 {
@@ -129,7 +130,8 @@ namespace Core.Client
                         {
                             var input = await Format.GetUserInput("Durée", "", 12);
                             var parsedInput = Int32.Parse(input);
-                            Client.SetJail(handle, "Troll", parsedInput);
+                            var reason = await Format.GetUserInput("Raison", "", 20);
+                            BaseScript.TriggerServerEvent("core:jail", handle, reason, parsedInput);
                         };
                         var spec = new NativeItem("Téléporter à lui", "Guette le joueur");
                         spec.Activated += (sender, e) =>
@@ -231,12 +233,12 @@ namespace Core.Client
                         var hash = (uint)GetHashKey(model);
                         if (!IsModelInCdimage(hash) || !IsModelAVehicle(hash))
                         {
-                            Format.SendNotif("~r~Votre véhicule n'existe pas");
+                            Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "~r~Votre véhicule n'existe pas");
                             return;
                         }
                         var vehicle = await World.CreateVehicle(model, Game.PlayerPed.Position, Game.PlayerPed.Heading);
                         Game.PlayerPed.SetIntoVehicle(vehicle, VehicleSeat.Driver);
-                        Format.SendNotif("~g~Votre véhicule est apparu");
+                        Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "~g~Votre véhicule est apparu");
                     };
 
                     var repair = new NativeItem("Réparer un véhicule");
@@ -249,11 +251,11 @@ namespace Core.Client
                             SetVehicleEngineHealth(vehicle, 100);
                             SetVehicleEngineOn(vehicle, true, true, true);
                             SetVehicleFixed(vehicle);
-                            Format.SendNotif("~g~Vous avez bien réparé le véhicule");
+                            Format.ShowAdvancedNotification("ShurikenRP", "Admin Sys.", "~g~Vous avez bien réparé le véhicule");
                         }
                         else
                         {
-                            Format.SendNotif("~r~Vous devez être dans un véhicule");
+                            Format.ShowAdvancedNotification("ShurikenRP", "Admin Sys.", "~r~Vous devez être dans un véhicule"); ;
                         }
                     };
 
@@ -275,15 +277,6 @@ namespace Core.Client
                     {
                         var input = await Format.GetUserInput("Combien de mètre", "", 5);
                         ClearAreaOfEverything(PlayerPos.X, PlayerPos.Y, PlayerPos.Z, int.Parse(input), false, false, false, false);
-                    };
-
-                    var bomb = new NativeItem("Crash Bandicoot");
-                    adminMenu.Add(bomb);
-                    bomb.Activated += async (sender, e) =>
-                    {
-                        var size = await Format.GetUserInput("Taille", "", 5);
-                        World.AddExplosion(new Vector3(216.8f, -810, 30.7f), ExplosionType.PetrolPump, int.Parse(size), 2);
-                        World.AddExplosion(new Vector3(206.8f, -810, 30.7f), ExplosionType.PetrolPump, int.Parse(size), 2);
                     };
                 }
 
@@ -318,7 +311,7 @@ namespace Core.Client
                                 if (!model.IsInCdImage || !model.IsValid)
                                 {
                                     Debug.WriteLine($"Le modèle du véhicule {model} n'est pas valide ou n'est pas présent dans les fichiers du jeu.");
-                                    Format.SendNotif("Erreur: veuillez contacter un admin");
+                                    Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "Erreur: veuillez contacter un admin");
                                     return;
                                 }
 
@@ -334,13 +327,18 @@ namespace Core.Client
                                 if (car != null && car.Exists())
                                 {
                                     car.IsPersistent = true;
+                                    SetPedIntoVehicle(GetPlayerPed(-1), car.Handle, -2);
+                                    SendVehicleInfo(car);
+                                    BaseScript.TriggerServerEvent("core:getVehicleInfo");
                                 }
-                                Parking.SendVehicleInfo(car);
-                                BaseScript.TriggerServerEvent("core:getVehicleInfo");
+                                else
+                                {
+                                    Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "Erreur: Impossible de créer le véhicule");
+                                }
                             }
                             else
                             {
-                                Format.SendNotif("Vous n'avez pas assez de ~r~bitcoins~s~...");
+                                Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "Vous n'avez pas assez de ~r~bitcoins~s~...");
                             }
                         };
                     }
@@ -418,7 +416,7 @@ namespace Core.Client
                                         }
 
                                         var clothesJson = JsonConvert.SerializeObject(clothesSet);
-                                        BaseScript.TriggerServerEvent("core:updateClothe", clothesJson);
+                                        // BaseScript.TriggerServerEvent("core:updateClothe", clothesJson);
                                     }
                                     else
                                     {
@@ -459,7 +457,7 @@ namespace Core.Client
                                     }
                                     else
                                     {
-                                        Format.SendNotif("Tu n'as pas assez d'~r~argent...");
+                                        Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "Tu n'as pas assez d'~r~argent...");
                                     }
                                 }
                             };
@@ -502,10 +500,96 @@ namespace Core.Client
                     }
                 } else
                 {
-                    Format.SendNotif("~r~Vous êtes mort...");
+                    Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "~r~Vous êtes mort...");
                 }
                 SetSubmenu(MainMenu, shopMenu, menuInfo, inventoryMenu, clothMenu, billsMenu, weaponsMenu);
                 SetPool(MainMenu, shopMenu, menuInfo, inventoryMenu, clothMenu, billsMenu, weaponsMenu);
+            }
+        }
+
+        public void SendVehicleInfo(Vehicle vehicle)
+        {
+            if (vehicle == null)
+            {
+                Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "Erreur: Le véhicule est null");
+                return;
+            }
+
+            if (!vehicle.Exists())
+            {
+                Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "Vous n'êtes pas dans une voiture");
+                return;
+            }
+
+            var vehicleMods = vehicle.Mods;
+            if (vehicleMods == null)
+            {
+                Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "Erreur: Les modifications du véhicule sont null");
+                return;
+            }
+            if (vehicle.Exists())
+            {
+                VehicleInfo info = new VehicleInfo
+                {
+                    Model = API.GetDisplayNameFromVehicleModel((uint)vehicle.Model.Hash),
+                    Plate = vehicle.Mods.LicensePlate,
+                    Boot = new List<BootInfo>(),
+                    EngineLevel = vehicle.Mods[VehicleModType.Engine].Index,
+                    BrakeLevel = vehicle.Mods[VehicleModType.Brakes].Index,
+                    ColorPrimary = (int)vehicle.Mods.PrimaryColor,
+                    ColorSecondary = (int)vehicle.Mods.SecondaryColor,
+                    Spoiler = vehicle.Mods[VehicleModType.Spoilers].Index,
+                    Bumber_F = vehicle.Mods[VehicleModType.FrontBumper].Index,
+                    Bumber_R = vehicle.Mods[VehicleModType.RearBumper].Index,
+                    Skirt = vehicle.Mods[VehicleModType.SideSkirt].Index,
+                    Exhaust = vehicle.Mods[VehicleModType.Exhaust].Index,
+                    Chassis = vehicle.Mods[VehicleModType.Frame].Index,
+                    Grill = vehicle.Mods[VehicleModType.Grille].Index,
+                    Bonnet = vehicle.Mods[VehicleModType.Hood].Index,
+                    Wing_L = vehicle.Mods[VehicleModType.Fender].Index,
+                    Wing_R = vehicle.Mods[VehicleModType.RightFender].Index,
+                    Roof = vehicle.Mods[VehicleModType.Roof].Index,
+                    Engine = vehicle.Mods[VehicleModType.Engine].Index,
+                    Brakes = vehicle.Mods[VehicleModType.Brakes].Index,
+                    Gearbox = vehicle.Mods[VehicleModType.Transmission].Index,
+                    Horn = vehicle.Mods[VehicleModType.Horns].Index,
+                    Suspension = vehicle.Mods[VehicleModType.Suspension].Index,
+                    Armour = vehicle.Mods[VehicleModType.Armor].Index,
+                    Subwoofer = vehicle.Mods[VehicleModType.Speakers].Index,
+                    Hydraulics = vehicle.Mods[VehicleModType.Hydraulics].Index,
+                    Wheels = vehicle.Mods[VehicleModType.FrontWheel].Index,
+                    WheelsRearOrHydraulics = vehicle.Mods[VehicleModType.RearWheel].Index,
+                    PLTHolder = vehicle.Mods[VehicleModType.PlateHolder].Index,
+                    PLTVanity = vehicle.Mods[VehicleModType.VanityPlates].Index,
+                    Interior1 = vehicle.Mods[VehicleModType.TrimDesign].Index,
+                    Interior2 = vehicle.Mods[VehicleModType.Ornaments].Index,
+                    Interior3 = vehicle.Mods[VehicleModType.Dashboard].Index,
+                    Interior4 = vehicle.Mods[VehicleModType.DialDesign].Index,
+                    Interior5 = vehicle.Mods[VehicleModType.DoorSpeakers].Index,
+                    Seats = vehicle.Mods[VehicleModType.Seats].Index,
+                    Steering = vehicle.Mods[VehicleModType.SteeringWheels].Index,
+                    Knob = vehicle.Mods[VehicleModType.ColumnShifterLevers].Index,
+                    Plaque = vehicle.Mods[VehicleModType.Plaques].Index,
+                    Ice = vehicle.Mods[VehicleModType.Speakers].Index,
+                    Trunk = vehicle.Mods[VehicleModType.Trunk].Index,
+                    Hydro = vehicle.Mods[VehicleModType.Hydraulics].Index,
+                    EngineBay1 = vehicle.Mods[VehicleModType.EngineBlock].Index,
+                    EngineBay2 = vehicle.Mods[VehicleModType.Struts].Index,
+                    EngineBay3 = vehicle.Mods[VehicleModType.ArchCover].Index,
+                    Chassis2 = vehicle.Mods[VehicleModType.Aerials].Index,
+                    Chassis3 = vehicle.Mods[VehicleModType.Trim].Index,
+                    Chassis4 = vehicle.Mods[VehicleModType.Trim].Index,
+                    Chassis5 = vehicle.Mods[VehicleModType.Tank].Index,
+                    Door_L = vehicle.Mods[VehicleModType.Windows].Index,
+                    Door_R = vehicle.Mods[VehicleModType.Windows].Index,
+                    LiveryMod = vehicle.Mods[VehicleModType.Livery].Index
+                };
+
+                BaseScript.TriggerServerEvent("core:sendVehicleInfo", JsonConvert.SerializeObject(info));
+            }
+            else
+            {
+                Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "Vous n'êtes pas dans une voiture");
             }
         }
 

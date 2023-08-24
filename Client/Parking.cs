@@ -28,7 +28,6 @@ namespace Core.Client
             Client = caller;
             Format = caller.Format;
             PlayerMenu = caller.PlayerMenu;
-            // Client.AddEvent("core:sendVehicleInfos", new Action<string, int>(GetVehicles));
             ParkingInfo DriftParking = new ParkingInfo("Drift Parking",
             new Vector3(-2184.8f, 1099, -23.2f),
             new Vector3(-2177.4f, 1107.4f, -24.3f),
@@ -144,6 +143,24 @@ namespace Core.Client
 
         public void SendVehicleInfo(Vehicle vehicle)
         {
+            if (vehicle == null)
+            {
+                Format.ShowAdvancedNotification("ShurikenRP", "Vehicle Sys.", "Erreur: Le véhicule est null");
+                return;
+            }
+
+            if (!vehicle.Exists())
+            {
+                Format.ShowAdvancedNotification("ShurikenRP", "Vehicle Sys.", "Vous n'êtes pas dans une voiture");
+                return;
+            }
+
+            var vehicleMods = vehicle.Mods;
+            if (vehicleMods == null)
+            {
+                Format.ShowAdvancedNotification("ShurikenRP", "Vehicle Sys.", "Erreur: Les modifications du véhicule sont null");
+                return;
+            }
             if (vehicle.Exists())
             {
                 VehicleInfo info = new VehicleInfo
@@ -202,19 +219,11 @@ namespace Core.Client
                     LiveryMod = vehicle.Mods[VehicleModType.Livery].Index
                 };
 
-
-                List<VehicleInfo> cars = new List<VehicleInfo>
-                {
-                    info
-                };
-
-                string json = JsonConvert.SerializeObject(cars);
-
-                BaseScript.TriggerServerEvent("core:sendVehicleInfo", json);
+                BaseScript.TriggerServerEvent("core:sendVehicleInfo", JsonConvert.SerializeObject(info));
             }
             else
             {
-                Format.SendNotif("Vous n'êtes pas dans une voiture");
+                Format.ShowAdvancedNotification("ShurikenRP", "Vehicle Sys.", "Vous n'êtes pas dans une voiture");
             }
         }
 
@@ -304,23 +313,23 @@ namespace Core.Client
                                     SetVehicleColours(vehTask.Result.Handle, car.ColorPrimary, car.ColorSecondary);
                                     SetVehicleDoorsLocked(vehTask.Result.Handle, 2);
                                     SetVehicleLivery(model, car.LiveryMod);
-                                    Format.SendNotif("~g~Votre véhicule est bien sorti.");
+                                    Format.ShowAdvancedNotification("ShurikenRP", "Vehicle Sys.", "~g~Votre véhicule est bien sorti.");
                                     menu.Visible = false;
                                 }
                                 else
                                 {
-                                    Format.SendNotif("~r~Erreur lors de la création du véhicule.");
+                                    Format.ShowAdvancedNotification("ShurikenRP", "Vehicle Sys.", "~r~Erreur lors de la création du véhicule.");
                                 }
                             });
                         }
                         else
                         {
-                            Format.SendNotif("~r~Toutes les positions de stationnement sont occupées.");
+                            Format.ShowAdvancedNotification("ShurikenRP", "Vehicle Sys.", "~r~Toutes les positions de stationnement sont occupées.");
                         }
                     }
                     else
                     {
-                        Format.SendNotif("~r~Vous ne pouvez pas sortir ce véhicule. Quelque chose l'en empêche.");
+                        Format.ShowAdvancedNotification("ShurikenRP", "Vehicle Sys.", "~r~Vous ne pouvez pas sortir ce véhicule. Quelque chose l'en empêche.");
                     }
                 };
             }

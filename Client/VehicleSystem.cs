@@ -59,108 +59,89 @@ namespace Core.Client
             {
                 SetVehicleDoorsLocked(id, 1);
                 PlayVehicleDoorOpenSound(id, 1);
-                Format.SendNotif("~g~Vous avez ouvert votre voiture");
+                // Format.SendNotif("~g~Vous avez ouvert votre voiture");
+                Format.ShowAdvancedNotification("ShurikenRP", "Vehicle Sys.", "~g~Vous avez ouvert votre voiture");
             }
             else if (isLock == 1)
             {
                 SetVehicleDoorsLocked(id, 2);
                 PlayVehicleDoorOpenSound(id, 2);
-                Format.SendNotif("~r~Vous avez fermé votre voiture");
+                // Format.SendNotif("~r~Vous avez fermé votre voiture");
+                Format.ShowAdvancedNotification("ShurikenRP", "Vehicle Sys.", "~r~Vous avez fermé votre voiture");
             }
             else
             {
-                Format.SendNotif("Valeur de verrouillage non valide");
+                Format.ShowAdvancedNotification("ShurikenRP", "Vehicle Sys.", "Valeur de verrouillage non valide");
             }
         }
-        public void GetVehicleBoot()
+        public void GetVehicleBoot(string plate)
         {
-            var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
-            Vehicle closestVehicle = World.GetClosest<Vehicle>(playerCoords, World.GetAllVehicles());
-            var isLock = GetVehicleDoorLockStatus(closestVehicle.Handle);
-            string plate = GetVehicleNumberPlateText(closestVehicle.Handle);
             var items = PlayerMenu.PlayerInst.Inventory;
             var menu = new NativeMenu($"{plate}", "Coffre de la voiture")
             {
                 UseMouse = false
             };
-            
-            var distance = GetDistanceBetweenCoords(playerCoords.X, playerCoords.Y, playerCoords.Z, closestVehicle.Position.X, closestVehicle.Position.Y, closestVehicle.Position.Z, true);
-            if (closestVehicle != null)
+            Pool.Add(menu);
+            menu.Visible = true;
+
+            var pick = new NativeMenu("Retirer", "Retirer")
             {
-                if (distance < 2.5)
+                UseMouse = false
+            };
+            menu.AddSubMenu(pick);
+            Pool.Add(pick);
+
+            var drop = new NativeMenu("Déposer", "Déposer")
+            {
+                UseMouse = false
+            };
+            menu.AddSubMenu(drop);
+            Pool.Add(drop);
+            if (items != null)
+            {
+                foreach (var item in items)
                 {
-                    if (isLock != 2)
+                    if (item.Quantity > 0 && item.Item != null)
                     {
-                        BaseScript.TriggerServerEvent("core:requestVehicleByPlate", plate);
-                        Pool.Add(menu);
-                        menu.Visible = true;
-
-                        var pick = new NativeMenu("Retirer", "Retirer")
+                        var invItem = new NativeItem($"{item.Item} ({item.Quantity})");
+                        drop.Add(invItem);
+                        invItem.Activated += async (sender, e) =>
                         {
-                            UseMouse = false
-                        };
-                        menu.AddSubMenu(pick);
-                        Pool.Add(pick);
-
-                        var drop = new NativeMenu("Déposer", "Déposer")
-                        {
-                            UseMouse = false
-                        };
-                        menu.AddSubMenu(drop);
-                        Pool.Add(drop);
-                        if (items != null)
-                        {
-                            foreach (var item in items)
+                            var textInput = await Format.GetUserInput("Quantité", "1", 4);
+                            var parsedInput = int.Parse(textInput);
+                            if (parsedInput <= item.Quantity)
                             {
-                                if (item.Quantity > 0 && item.Item != null)
-                                {
-                                    var invItem = new NativeItem($"{item.Item} ({item.Quantity})");
-                                    drop.Add(invItem);
-                                    invItem.Activated += async (sender, e) =>
-                                    {
-                                        var textInput = await Format.GetUserInput("Quantité", "1", 4);
-                                        var parsedInput = int.Parse(textInput);
-                                        if (parsedInput <= item.Quantity)
-                                        {
-                                            BaseScript.TriggerServerEvent("core:addItemInBoot", plate, item.Item, parsedInput, item.ItemType);
-                                        }
-                                        drop.Visible = false;
-                                    };
-                                }
+                                BaseScript.TriggerServerEvent("core:addItemInBoot", plate, item.Item, parsedInput, item.ItemType);
                             }
-                        }
-
-                        foreach (BootInfo boot in Client.MyVehicle.Boot)
-                        {
-                            if (boot.Quantity > 0)
-                            {
-                                var item = new NativeItem($"{boot.Item} ({boot.Quantity})");
-                                pick.Add(item);
-                                item.Activated += async (sender, e) =>
-                                {
-                                    var textInput = await Format.GetUserInput("Quantité", "1", 4);
-                                    var parsedInput = int.Parse(textInput);
-                                    if (parsedInput <= boot.Quantity)
-                                    {
-                                        BaseScript.TriggerServerEvent("core:removeItemFromBoot", plate, boot.Item, parsedInput);
-                                        if (boot.Quantity <= 0)
-                                        {
-                                            pick.Remove(item);
-                                        }
-                                    }
-                                    pick.Visible = false;
-                                };
-                            }
-                        }
+                            drop.Visible = false;
+                        };
                     }
                 }
-                
             }
-            else
+
+            foreach (BootInfo boot in Client.MyVehicle.Boot)
             {
-                Debug.WriteLine("Aucun véhicule trouvé à proximité.");
-                return;
+                if (boot.Quantity > 0)
+                {
+                    var item = new NativeItem($"{boot.Item} ({boot.Quantity})");
+                    pick.Add(item);
+                    item.Activated += async (sender, e) =>
+                    {
+                        var textInput = await Format.GetUserInput("Quantité", "1", 4);
+                        var parsedInput = int.Parse(textInput);
+                        if (parsedInput <= boot.Quantity)
+                        {
+                            BaseScript.TriggerServerEvent("core:removeItemFromBoot", plate, boot.Item, parsedInput);
+                            if (boot.Quantity <= 0)
+                            {
+                                pick.Remove(item);
+                            }
+                        }
+                        pick.Visible = false;
+                    };
+                }
             }
+            
         }
 
         public void VehicleMenu()
@@ -194,7 +175,7 @@ namespace Core.Client
                 }
                 else
                 {
-                    Format.SendNotif("~r~Vous n'êtes pas dans un véhicule");
+                    Format.ShowAdvancedNotification("ShurikenRP", "Vehicle Sys.", "~r~Vous n'êtes pas dans un véhicule");
                 }
             };
 
@@ -244,7 +225,7 @@ namespace Core.Client
                 }
                 else
                 {
-                    Format.SendNotif("~r~Vous n'êtes pas dans un véhicule");
+                    Format.ShowAdvancedNotification("ShurikenRP", "Vehicle Sys.", "~r~Vous n'êtes pas dans un véhicule");
                 }
             };
 
@@ -257,9 +238,8 @@ namespace Core.Client
             };
         }
 
-        public void OnTick()
+        public async Task OnTick()
         {
-
             if (IsPedInAnyVehicle(GetPlayerPed(-1), false))
             {
                 var vehicle = GetVehiclePedIsIn(GetPlayerPed(-1), false);
@@ -282,7 +262,7 @@ namespace Core.Client
             var closestVehicle = World.GetClosest(playerCoords, World.GetAllVehicles());
             if (closestVehicle != null && GetDistanceBetweenCoords(playerCoords.X, playerCoords.Y, playerCoords.Z, closestVehicle.Position.X, closestVehicle.Position.Y, closestVehicle.Position.Z, true) < 10)
             {
-                if (IsControlJustPressed(0, 303))
+                if (IsControlJustPressed(0, 303)) // U
                 {
                     string plate = GetVehicleNumberPlateText(closestVehicle.Handle);
                     var isLock = GetVehicleDoorLockStatus(closestVehicle.Handle);
@@ -290,9 +270,31 @@ namespace Core.Client
                 }
             }
 
-            if (IsControlJustPressed(0, 311))
+            if (IsControlJustPressed(0, 311)) // K
             {
-                GetVehicleBoot();
+                var isLock = GetVehicleDoorLockStatus(closestVehicle.Handle);
+                string plate = GetVehicleNumberPlateText(closestVehicle.Handle);
+                var distance = GetDistanceBetweenCoords(playerCoords.X, playerCoords.Y, playerCoords.Z, closestVehicle.Position.X, closestVehicle.Position.Y, closestVehicle.Position.Z, true);
+                if (closestVehicle != null)
+                {
+                    if (distance < 2.5)
+                    {
+                        if (isLock != 2)
+                        {
+                            BaseScript.TriggerServerEvent("core:requestVehicleByPlate", plate);
+                            while (Client.waitingForResponse)
+                            {
+                                await BaseScript.Delay(100);
+                            }
+                            GetVehicleBoot(plate);
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine("Aucun véhicule trouvé à proximité.");
+                    return;
+                }
             }
         }
     }

@@ -83,7 +83,7 @@ namespace Core.Client
                 Previsualisation_state = false;
                 DeleteVehicle(ref Car);
                 ClearAreaOfEverything(vehicleOut.X, vehicleOut.Y, vehicleOut.Z, 40, false, false, false, false);
-                Format.SendNotif("~r~Vous ne pouvez pas sortir ce véhicule. Quelque chose lui en empêche.");
+                Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "~r~Vous ne pouvez pas sortir ce véhicule. Quelque chose lui en empêche.");
             }
         }
 
@@ -92,7 +92,7 @@ namespace Core.Client
             if (Previsualisation_state)
             {
                 SetPedIntoVehicle(GetPlayerPed(-1), model.Hash, 1);
-                Format.SendNotif("~y~Prévisualisation de votre véhicule.\n ~w~Regarder derrière vous");
+                Format.ShowAdvancedNotification("ShurikenRP", "Illegal Sys.", "~y~Prévisualisation de votre véhicule.\n ~w~Regarder derrière vous");
 
                 var color_list = new Dictionary<string, List<int>>()
                 {
@@ -127,12 +127,11 @@ namespace Core.Client
                 menu.Add(buy);
                 var cost = GetVehicleModelValue(model);
                 var money = PlayerMenu.PlayerInst.Money;
-                CitizenFX.Core.Debug.WriteLine($"{PlayerMenu.PlayerInst.Money}, {GetVehicleModelValue(model)}");
                 buy.Activated += (sender, e) =>
                 {
                     if (money >= cost)
                     {
-                        Format.SendNotif("~g~Vous avez bien acheté le véhicule.\n Il sera livré dans votre garage dans quelques minutes...");
+                        Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "~g~Vous avez bien acheté le véhicule.\n Il sera livré dans votre garage dans quelques minutes..."); ;
                         BaseScript.TriggerServerEvent("core:transaction", cost);
 
                         Parking.SendVehicleInfo(MyVehicle);
@@ -140,7 +139,7 @@ namespace Core.Client
                     }
                     else
                     {
-                        Format.SendNotif("~r~Vous n'avez pas assez d'argent.");
+                        Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "~r~Vous n'avez pas assez d'argent.");
                     }
                 };
 
@@ -188,7 +187,6 @@ namespace Core.Client
             return cringeVehicles.Contains(vehicleName);
         }
 
-
         public void MenuShop()
         {
             var playerCoords = GetEntityCoords(PlayerPedId(), false);
@@ -230,7 +228,7 @@ namespace Core.Client
                     var classMenu = new NativeMenu(className, className)
                     {
                         UseMouse = false
-                    }; ;
+                    };
                     mainMenu.AddSubMenu(classMenu);
 
                     foreach (var vehicleName in vehicleClasses[vehicleClass])
@@ -238,8 +236,12 @@ namespace Core.Client
                         var vehicleHash = GetHashKey(vehicleName);
                         // todo
                         // SetVehicleHandlingFloat(vehicleHash, "CHandlingData", "nMonetaryValue", 100000);
+                        // var vehicleItem = new NativeItem(vehicleName,
+                        //    $"{SendNuiMessage(JsonConvert.SerializeObject(new { action = "SHOW_VEHICLE", name = char.ToUpper(vehicleName[0]) + vehicleName.Substring(1) }))}",
+                        //    $"{GetVehicleModelMonetaryValue(vehicleHash)}");
+
                         var vehicleItem = new NativeItem(vehicleName,
-                            $"{SendNuiMessage(JsonConvert.SerializeObject(new { action = "SHOW_VEHICLE", name = char.ToUpper(vehicleName[0]) + vehicleName.Substring(1) }))}",
+                            $"",
                             $"{GetVehicleModelMonetaryValue(vehicleHash)}");
                         classMenu.Add(vehicleItem);
 
@@ -309,10 +311,10 @@ namespace Core.Client
             {
                 
                 float carDist = vehicleOut.DistanceToSquared(playerCoords);
-                if (carDist > 50)
+                if (carDist > 100)
                 {
                     Previsualisation_state = false;
-                    Format.SendNotif("Et non gamin, où croyais-tu aller comme ça ?");
+                    Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "Et non gamin, où croyais-tu aller comme ça ?");
                     DeleteEntity(ref Car);
                 }
             }

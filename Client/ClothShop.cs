@@ -82,7 +82,6 @@ namespace Core.Client
             }
         }
 
-
         public void NewClothMenu()
         {
             var playerCoords = GetEntityCoords(PlayerPedId(), true);
@@ -535,107 +534,6 @@ namespace Core.Client
                                 var json = JsonConvert.SerializeObject(clothingSet);
                                 BaseScript.TriggerServerEvent("core:buyTopClothes", 250, json);
                             }
-                        };
-                    }
-                }
-            }
-        }
-
-        public void ClothMenu()
-        {
-            var playerCoords = GetEntityCoords(PlayerPedId(), false);
-
-            foreach (var cloth in ClothShopList)
-            {
-                var distance = playerCoords.DistanceToSquared(cloth.Checkout);
-                if (distance < 8)
-                {
-                    Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir");
-
-                    if (IsControlPressed(0, 38))
-                    {
-                        var menu = new NativeMenu("Magasin de vêtements", $"Magasin - {cloth.ShopName}")
-                        {
-                            UseMouse = false,
-                            HeldTime = 100
-                        };
-                        Pool.Add(menu);
-                        menu.Visible = true;
-                        var componentDict = new Dictionary<int, string>()
-                        {
-                            { 8, "Sous haut" },
-                            { 11, "Haut" },
-                            { 3, "Bras" },
-                            { 4, "Bas" },
-                            { 6, "Chaussures" },
-                            { 7, "Accessoires" }
-                        };
-
-                        foreach (var component in componentDict)
-                        {
-                            var subMenu = new NativeMenu($"{component.Value}", $"{component.Value}")
-                            {
-                                UseMouse = false
-                            };
-                            Pool.Add(subMenu);
-                            menu.AddSubMenu(subMenu);
-
-                            var itemDrawableList = Enumerable.Range(0, GetNumberOfPedDrawableVariations(GetPlayerPed(-1), component.Key)).ToList();
-                            NativeListItem<int> itemDrawable = new NativeListItem<int>(component.Value, itemDrawableList.ToArray());
-                            subMenu.Add(itemDrawable);
-
-                            var itemTextureList = Enumerable.Range(0, GetNumberOfPedTextureVariations(GetPlayerPed(-1), component.Key, itemDrawable.SelectedIndex)).ToList();
-                            NativeListItem<int> itemTexture = new NativeListItem<int>($"~h~Texture~s~ {component.Value}", itemTextureList.ToArray());
-                            subMenu.Add(itemTexture);
-
-                            itemDrawable.ItemChanged += (sender, e) =>
-                            {
-                                SetPedComponentVariation(GetPlayerPed(-1), component.Key, itemDrawable.SelectedIndex, 0, 1);
-                                itemTexture.SelectedIndex = 0;
-                            };
-
-                            itemTexture.ItemChanged += (sender, e) =>
-                            {
-                                SetPedComponentVariation(GetPlayerPed(-1), component.Key, itemDrawable.SelectedIndex, itemTexture.SelectedIndex, 1);
-                            };
-                            var submit = new NativeItem("Acheter (~g~$250~s~)");
-                            subMenu.Add(submit);
-
-                            submit.Activated += async (sender, e) =>
-                            {
-                                if (PlayerMenu.PlayerInst.Money >= 250)
-                                {
-                                    var textInput = await Format.GetUserInput("Donnez un nom", "Habit", 12);
-                                    foreach (var clothes in componentDict)
-                                    {
-                                        var itemDrawableF = subMenu.Items.OfType<NativeListItem<int>>().FirstOrDefault(item => item.Title == clothes.Value);
-                                        var itemTextureF = subMenu.Items.OfType<NativeListItem<int>>().FirstOrDefault(item => item.Title == $"~h~Texture~s~ {clothes.Value}");
-
-                                        if (itemDrawableF != null && itemTextureF != null)
-                                        {
-                                            int selectedDrawableIndex = itemDrawableF.SelectedIndex;
-                                            int selectedTextureIndex = itemTextureF.SelectedIndex;
-                                        }
-                                    }
-
-                                    BaseScript.TriggerServerEvent("core:buyClothes", 250, textInput, component.Key, itemDrawable.SelectedIndex, itemTexture.SelectedIndex, 1);
-                                    BaseScript.TriggerServerEvent("core:requestPlayerData");
-                                    subMenu.Visible = false;
-                                }
-                                else
-                                {
-                                    Format.SendNotif("~r~La misère est si belle...\n ~w~Vous n'avez pas assez d'argent.");
-                                }
-
-                            };
-
-                        }
-
-                        
-
-                        menu.Closed += (sender, e) =>
-                        {
-                            BaseScript.TriggerServerEvent("core:setClothes");
                         };
                     }
                 }

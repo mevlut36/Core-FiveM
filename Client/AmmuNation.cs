@@ -100,12 +100,12 @@ namespace Core.Client
                                 {
                                     if (PlayerMenu.PlayerInst.Money >= kvp2.Value)
                                     {
-                                        Format.SendNotif($"~g~Vous avez bien acheté {weapon.Key}");
+                                        Format.ShowAdvancedNotification("ShurikenRP", "AmmuNation", $"~g~Vous avez bien acheté {weapon.Key}");
                                         BaseScript.TriggerServerEvent("core:buyWeapon", kvp2.Key.ToString(), kvp2.Value);
                                     }
                                     else
                                     {
-                                        Format.SendNotif("~r~Vous n'avez pas assez d'argent.");
+                                        Format.ShowAdvancedNotification("ShurikenRP", "AmmuNation", "~r~Vous n'avez pas assez d'argent.");
                                     }
                                 };
                                 menu.Visible = true;
@@ -129,7 +129,7 @@ namespace Core.Client
                             }
                             else
                             {
-                                Format.SendNotif("~r~La somme est trop élevée");
+                                Format.ShowAdvancedNotification("ShurikenRP", "AmmuNation", "~r~La somme est trop élevée");
                             }
                         };
                     }

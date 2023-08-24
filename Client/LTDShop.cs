@@ -158,7 +158,7 @@ namespace Core.Client
                                 }
                                 else
                                 {
-                                    Format.SendNotif("~r~La somme est trop élevée");
+                                    Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "~r~La somme est trop élevée");
                                 }
 
                             };
@@ -211,7 +211,7 @@ namespace Core.Client
                                 }
                                 else
                                 {
-                                    Format.SendNotif("~r~La somme est trop élevé");
+                                    Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "~r~La somme est trop élevé");
                                 }
                             }
                             else if (actionBank.SelectedItem == "~g~<b>Déposer</b>")
@@ -223,7 +223,7 @@ namespace Core.Client
                                 }
                                 else
                                 {
-                                    Format.SendNotif("~r~La somme est trop élevé");
+                                    Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "~r~La somme est trop élevé");
                                 }
                             }
 

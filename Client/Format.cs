@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using static CitizenFX.Core.Native.API;
 using Core.Shared;
+using System.Drawing;
 
 namespace Core.Client
 {
@@ -76,15 +77,33 @@ namespace Core.Client
             return jsonObjectsList;
         }
 
-        /*
-         * Notification style
-         * Parameter: Text entry
-         */
-        public void SendNotif(string text)
+        public static Notification ShowAdvancedNotification(string title, string subtitle, string text, string icon = "CHAR_STRETCH", Color flashColor = new Color(), bool blink = false, NotificationType type = NotificationType.Default, bool showInBrief = true, bool sound = true)
         {
-            API.BeginTextCommandThefeedPost("STRING");
-            API.AddTextComponentSubstringPlayerName(text);
-            API.EndTextCommandThefeedPostTicker(false, true);
+            AddTextEntry("ScaleformUIAdvancedNotification", text);
+            BeginTextCommandThefeedPost("ScaleformUIAdvancedNotification");
+            AddTextComponentSubstringPlayerName(text);
+            SetNotificationBackgroundColor(140);
+            if (!flashColor.IsEmpty && !blink)
+                SetNotificationFlashColor(flashColor.R, flashColor.G, flashColor.B, flashColor.A);
+            if (sound) Audio.PlaySoundFrontend("DELETE", "HUD_DEATHMATCH_SOUNDSET");
+            return new Notification(EndTextCommandThefeedPostMessagetext(icon, icon, true, (int)type, title, subtitle));
+            //return new Notification(EndTextCommandThefeedPostTicker(blink, showInBrief));
+        }
+
+        public sealed class Notification
+        {
+            #region Fields
+            int _handle;
+            #endregion
+
+            internal Notification(int handle)
+            {
+                _handle = handle;
+            }
+            public void Hide()
+            {
+                ThefeedRemoveItem(_handle);
+            }
         }
 
         public static void CustomNotif(string message, bool blink = true, bool saveToBrief = true)
@@ -161,11 +180,17 @@ namespace Core.Client
 
         public static async Task<string> GetUserInput(string windowTitle, string defaultText, int maxInputLength)
         {
-            // THANKS vMENU
-            var spacer = "\t";
-            AddTextEntry($"{GetCurrentResourceName().ToUpper()}_WINDOW_TITLE", $"{windowTitle ?? "Enter"}:{spacer}(MAX {maxInputLength} Characters)");
+            var resourceName = GetCurrentResourceName().ToUpper();
+            string title = $"{windowTitle ?? "Enter"}:\t(MAX {maxInputLength} Characters)";
 
-            DisplayOnscreenKeyboard(1, $"{GetCurrentResourceName().ToUpper()}_WINDOW_TITLE", "", defaultText ?? "", "", "", "", maxInputLength);
+            AddTextEntry($"{resourceName}_WINDOW_TITLE", title);
+            DisplayOnscreenKeyboard(1, $"{resourceName}_WINDOW_TITLE", "", defaultText ?? "", "", "", "", maxInputLength);
+
+            if (string.IsNullOrEmpty(defaultText))
+            {
+                defaultText = "";
+            }
+
             await BaseScript.Delay(0);
 
             while (true)
@@ -180,11 +205,12 @@ namespace Core.Client
                     case 1:
                         return GetOnscreenKeyboardResult();
                     default:
-                        await BaseScript.Delay(0);
+                        await BaseScript.Delay(50); // Wait 50 ms before next iteration
                         break;
                 }
             }
         }
+
 
         /*
          * Check if date of birth is in valid format
@@ -195,7 +221,7 @@ namespace Core.Client
         {
             if (date.Length != 10)
             {
-                SendNotif("Le format n'est pas valide");
+                ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "Le format n'est pas valide");
                 return false;
             }
 
@@ -203,13 +229,13 @@ namespace Core.Client
 
             if (parts.Length != 3)
             {
-                SendNotif("Il manque le mois jour ou année");
+                ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "Il manque le mois jour ou année");
                 return false;
             }
 
             if (!int.TryParse(parts[0], out int day) || !int.TryParse(parts[1], out int month) || !int.TryParse(parts[2], out int year))
             {
-                SendNotif("C'est bon chef");
+                ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "C'est bon chef");
                 return false;
             }
 

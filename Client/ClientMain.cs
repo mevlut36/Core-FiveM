@@ -37,6 +37,7 @@ namespace Core.Client
 
         public int PlayerMoney = 0;
         public VehicleInfo MyVehicle;
+        public bool waitingForResponse = true;
 
         public bool IsDead = false;
         private DateTime DeathTime;
@@ -64,7 +65,7 @@ namespace Core.Client
                 ClearPedTasksImmediately(GetPlayerPed(-1));
                 await OnPlayerDeath();
             });
-
+            
             Format = new Format(this);
             PlayerMenu = new PlayerMenu(this);
             PlayerSystem = new PlayerSystem(this);
@@ -80,10 +81,11 @@ namespace Core.Client
             Teleport = new Teleport(this);
             EventHandlers["core:getPlayerData"] += new Action<string>(PlayerMenu.GetPlayerData);
             EventHandlers["core:reveivePlayersRobbery"] += new Action<string>(Bank.GetPlayers);
+            EventHandlers["core:updateInventory"] += new Action<string>(UpdateInventory);
             RegisterCommand("report", new Action<int, List<object>, string>((source, args, raw) =>
             {
                 string arguments = string.Join(" ", args);
-                Format.SendNotif("~g~Votre report a bien été envoyer, veuillez patienter");
+                Format.ShowAdvancedNotification("ShurikenRP", "Admin Sys.", "~g~Votre report a bien été envoyer, veuillez patienter");
                 var newReport = new ReportClass
                 {
                     Player = PlayerMenu.PlayerInst,
@@ -100,7 +102,7 @@ namespace Core.Client
                     var gangId = Convert.ToString(args[1]);
                     if (args.Count < 2 || gangId != "staff" || gangId != "player")
                     {
-                        Format.SendNotif("~r~Usage: /setrank [player_id] [staff|player]");
+                        Format.ShowAdvancedNotification("ShurikenRP", "Admin Sys.", "~r~Usage: /setrank [player_id] [staff|player]");
                     }
                     else
                     {
@@ -111,14 +113,17 @@ namespace Core.Client
 
             Tick += ScenarioSuppressionLoop;
 
-            var item1 = new LTDItems("Ordinateur", "Idéal pour faire du pentest...", 25000);
+            var item1 = new LTDItems("Ordinateur", "Idéal pour faire du pentest...", 15000);
             NarcoItems.Add(item1);
 
-            var item2 = new LTDItems("Perceuse", "Idéale pour percer une porte...", 25000);
+            var item2 = new LTDItems("Perceuse", "Idéale pour percer une porte...", 10000);
             NarcoItems.Add(item2);
 
-            var item3 = new LTDItems("Phone", "Excellent téléphone", 1000);
+            var item3 = new LTDItems("Phone", "Excellent téléphone", 1500);
             NarcoItems.Add(item3);
+            
+            var item4 = new LTDItems("Outil de crochetage", "En cas de panne", 1000);
+            NarcoItems.Add(item4);
         }
 
         private static readonly List<string> SCENARIO_TYPES = new List<string>
@@ -166,14 +171,14 @@ namespace Core.Client
                     {
                         if (LastRobbery.HasValue && (DateTime.Now - LastRobbery.Value).TotalHours < 1)
                         {
-                            Format.SendNotif("~r~Vous ne pouvez pas braquer encore. Attendez un peu.");
+                            Format.ShowAdvancedNotification("ShurikenRP", "Illegal Sys.", "~r~Vous ne pouvez pas braquer encore. Attendez un peu.");
                             return;
                         }
 
                         IsRobbing = true;
                         LastRobbery = DateTime.Now;
                         Debug.WriteLine($"Robbing ID {ped}");
-                        Format.SendNotif("~r~Braquage en cours...");
+                        Format.ShowAdvancedNotification("ShurikenRP", "Illegal Sys.", "~r~Braquage en cours...");
                         var playerCoords = GetEntityCoords(GetPlayerPed(-1), true);
                         uint streetNameHash = 0;
                         uint crossingRoadHash = 0;
@@ -237,8 +242,8 @@ namespace Core.Client
                     _ = LocalPlayer.ChangeModel(model);
                     SetPedDefaultComponentVariation(LocalPlayer.Character.Handle);
                 }
-                
-                Format.SendNotif($"~g~Bienvenue ~w~{player.Firstname}");
+
+                Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", $"~g~Bienvenue ~w~{player.Firstname}");
 
                 if (player.Clothes != null)
                 {
@@ -272,7 +277,7 @@ namespace Core.Client
                 SetPedHeadOverlayColor(LocalPlayer.Character.Handle, 1, 1, 1, 1);
                 SetPedHeadOverlayColor(LocalPlayer.Character.Handle, 2, 1, skin.EyebrowOpacity, skin.EyebrowOpacity);
                 Game.PlayerPed.Position = PlayerMenu.PlayerInst.LastPosition;
-                PlayerMenu.PlayerInst.Cars = PlayerMenu.PlayerInst.Cars;
+                // PlayerMenu.PlayerInst.Cars = PlayerMenu.PlayerInst.Cars;
                 var vehicles = JsonConvert.DeserializeObject<List<VehicleInfo>>(player.Cars);
                 if (vehicles != null && vehicles.Count > 0)
                 {
@@ -314,13 +319,14 @@ namespace Core.Client
         [EventHandler("core:sendNotif")]
         public void ServerSendNotif(string text)
         {
-            Format.SendNotif(text);
+            Format.ShowAdvancedNotification("ShurikenRP", "Core System", text);
         }
 
         [EventHandler("core:getVehicleByPlate")]
         public void GetVehicleByPlate(string json)
         {
             MyVehicle = JsonConvert.DeserializeObject<VehicleInfo>(json);
+            waitingForResponse = false;
         }
 
         private async Task ScenarioSuppressionLoop()
@@ -388,7 +394,7 @@ namespace Core.Client
                         }
                         else
                         {
-                            Format.SendNotif("Vous n'avez pas assez d'argent");
+                            Format.ShowAdvancedNotification("ShurikenRP", "ShurikenCore", "Vous n'avez pas assez d'argent");
                         }
                     }
                 } else
@@ -422,6 +428,15 @@ namespace Core.Client
             SetEntityInvincible(ped.Result.Handle, true);
             SetBlockingOfNonTemporaryEvents(ped.Result.Handle, true);
         }
+
+        [EventHandler("core:updateVehicles")]
+        public void UpdateVehicles(string json)
+        {
+            var cars = JsonConvert.DeserializeObject<List<VehicleInfo>>(PlayerMenu.PlayerInst.Cars);
+            var car = JsonConvert.DeserializeObject<VehicleInfo>(json);
+            Parking.CarList.Add(car);
+        }
+
         public void NarcoMenu()
         {
             var playerCoords = GetEntityCoords(PlayerPedId(), false);
@@ -464,7 +479,7 @@ namespace Core.Client
                             }
                             else
                             {
-                                Format.SendNotif("~r~La somme est trop élevée");
+                                Format.ShowAdvancedNotification("ShurikenRP", "Illegal Sys.", "~r~La somme est trop élevée");
                             }
 
                         };
@@ -489,6 +504,7 @@ namespace Core.Client
                 SetPlayerWantedLevel(PlayerId(), 0, false);
                 SetPlayerWantedLevelNow(PlayerId(), false);
             }
+
             await PopulationManaged();
             PlayerMenu.F5Menu();
             Parking.OnTick();
@@ -496,7 +512,7 @@ namespace Core.Client
             Bank.OnTick();
             LTDShop.OnTick();
             ClothShop.OnTick();
-            VehicleSystem.OnTick();
+            await VehicleSystem.OnTick();
             AmmuNation.GunShop();
             Teleport.OnTick();
             // ContainerSystem.OnTick();
@@ -514,6 +530,7 @@ namespace Core.Client
                 }
             }
         }
+
         public Task PopulationManaged()
         {
             SetVehicleDensityMultiplierThisFrame(0.05f);
@@ -536,11 +553,11 @@ namespace Core.Client
             API.DrawRect(0.07f, 0.75f, 0.16f, 0.02f, 0, 0, 0, 150);
             API.DrawRect(0.07f, 0.75f, healthBarWidth, 0.02f, 0, 255, 0, 150);
         }
-        public void SetJail(string playerId, string reason, int time)
+
+        public void UpdateInventory(string json)
         {
-            TriggerServerEvent("core:jail", playerId, reason, time);
+            var inventory = JsonConvert.DeserializeObject<List<ItemQuantity>>(json);
+            PlayerMenu.PlayerInst.Inventory = inventory;
         }
-
-
     }
 }
