@@ -81,6 +81,7 @@ namespace Core.Server
                     }
                     var playerInstance = new PlayerInstance
                     {
+                        License = existingPlayer.License,
                         Id = existingPlayer.Id,
                         State = existingPlayer.State,
                         Discord = existingPlayer.Discord,
@@ -102,6 +103,49 @@ namespace Core.Server
                 }
             }
         }
+
+        [EventHandler("core:updateInventory")]
+        public void UpdateInventory([FromSource] Player player, int playerId = -1)
+        {
+            using (var dbContext = new DataContext())
+            {
+                Player targetPlayer = playerId == -1 ? player : Players[playerId];
+                var license = targetPlayer.Identifiers["license"];
+                var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
+
+                if (existingPlayer != null)
+                {
+                    TriggerClientEvent(targetPlayer, "core:updateInventory", existingPlayer.Inventory);
+                    TriggerClientEvent(targetPlayer, "legal:updateInventory", existingPlayer.Inventory);
+                }
+            }
+        }
+
+        [EventHandler("core:updatePlayer")]
+        public void UpdatePlayer([FromSource] Player player, dynamic obj, int playerId = -1)
+        {
+            using (var dbContext = new DataContext())
+            {
+                Player targetPlayer = playerId == -1 ? player : Players[playerId];
+                var license = targetPlayer.Identifiers["license"];
+                var existingPlayer = dbContext.Player.FirstOrDefault(p => p.License == license);
+
+                if (existingPlayer != null)
+                {
+                    if (obj is ItemQuantity)
+                    {
+                        var data = JsonConvert.DeserializeObject<List<ItemQuantity>>(obj);
+                        TriggerClientEvent(targetPlayer, "core:updatePlayer", existingPlayer.Inventory);
+                    }
+                    else if (obj is string && ((string)obj).Contains("Bills"))
+                    {
+                        var data = (string)obj;
+                        TriggerClientEvent(targetPlayer, "core:updatePlayer", existingPlayer.Bills);
+                    }
+                }
+            }
+        }
+
 
         private void SendPlayerDataToClientEvents(Player player, PlayerInstance instance)
         {
@@ -251,7 +295,7 @@ namespace Core.Server
                     dbContext.SaveChanges();
 
                     GetCompanyData(player, id);
-                    GetPlayerData(player);
+                    UpdateInventory(player);
                 }
             }
         }
@@ -306,7 +350,7 @@ namespace Core.Server
                     dbContext.SaveChanges();
 
                     GetCompanyData(player, id);
-                    GetPlayerData(player);
+                    UpdateInventory(player);
                 }
             }
         }
@@ -355,7 +399,7 @@ namespace Core.Server
                     existingPlayer.Inventory = updatedInventory;
                     dbContext.SaveChanges();
 
-                    GetPlayerData(player);
+                    UpdateInventory(player);
                     TriggerClientEvent(player, "core:sendNotif", $"Vous avez récupérer ~g~${dollars.Quantity}");
                 }
                 else
@@ -414,7 +458,7 @@ namespace Core.Server
                         existingPlayer.Inventory = updatedInventory;
                         dbContext.SaveChanges();
 
-                        GetPlayerData(player);
+                        UpdateInventory(player);
                         TriggerClientEvent(player, "core:sendNotif", $"Vous avez récupérer ~g~${dollars.Quantity}");
                     }
                 }
@@ -548,7 +592,7 @@ namespace Core.Server
         [EventHandler("core:sendVehicleInfo")]
         public void SendVehicleInfo([FromSource] Player player, string json)
         {
-            var data = JsonConvert.DeserializeObject<List<VehicleInfo>>(json);
+            var data = JsonConvert.DeserializeObject<VehicleInfo>(json);
             var license = player.Identifiers["license"];
             using (var dbContext = new DataContext())
             {
@@ -556,25 +600,21 @@ namespace Core.Server
 
                 if (existingPlayer != null)
                 {
-                    List<VehicleInfo> cars;
-                    if (!string.IsNullOrEmpty(existingPlayer.Cars))
-                    {
-                        cars = JsonConvert.DeserializeObject<List<VehicleInfo>>(existingPlayer.Cars);
-                    }
-                    else
-                    {
-                        cars = new List<VehicleInfo>();
-                    }
+                    var cars = JsonConvert.DeserializeObject<List<VehicleInfo>>(existingPlayer.Cars);
 
-                    cars.AddRange(data);
+                    cars.Add(data);
 
                     existingPlayer.Cars = JsonConvert.SerializeObject(cars);
                     dbContext.SaveChanges();
                 }
-                GetPlayerData(player);
+
+                var newVehicle = JsonConvert.SerializeObject(data);
+
+                TriggerClientEvent("core:updateVehicles", newVehicle);
                 TriggerClientEvent(player, "core:sendNotif", "Vos informations ont bien été enregistrées");
             }
         }
+
 
         [EventHandler("core:getVehicleInfo")]
         public void GetVehicleInfo([FromSource] Player player)
@@ -599,42 +639,36 @@ namespace Core.Server
         {
             using (var dbContext = new DataContext())
             {
-                const int pageSize = 100;
-                int pageNumber = 0;
-                while (true)
+                var carsData = dbContext.Player.Select(p => p.Cars).ToList();
+                VehicleInfo foundVehicle = null;
+                foreach (var carData in carsData)
                 {
-                    var playersBatch = dbContext.Player
-                                                .Skip(pageNumber * pageSize)
-                                                .Take(pageSize)
-                                                .ToList();
-                    if (!playersBatch.Any())
+                    var vehicles = JsonConvert.DeserializeObject<List<VehicleInfo>>(carData);
+                    var targetVehicle = vehicles.FirstOrDefault(v => v.Plate == targetPlate);
+                    if (targetVehicle != null)
                     {
+                        foundVehicle = targetVehicle;
                         break;
                     }
-
-                    foreach (var p in playersBatch)
-                    {
-                        var vehicles = JsonConvert.DeserializeObject<List<VehicleInfo>>(p.Cars);
-                        var targetVehicle = vehicles.FirstOrDefault(v => v.Plate == targetPlate);
-                        if (targetVehicle != null)
-                        {
-                            TriggerClientEvent(player, "core:getVehicleByPlate", JsonConvert.SerializeObject(targetVehicle));
-                        } else
-                        {
-                            var newVehicle = new VehicleInfo
-                            {
-                                Boot = new List<BootInfo>(),
-                                Plate = targetPlate,
-                            };
-                            TriggerClientEvent(player, "core:getVehicleByPlate", JsonConvert.SerializeObject(newVehicle));
-                        }
-                    }
-
-                    pageNumber++;
                 }
 
+                if (foundVehicle != null)
+                {
+                    TriggerClientEvent(player, "core:getVehicleByPlate", JsonConvert.SerializeObject(foundVehicle));
+                }
+                else
+                {
+                    var newVehicle = new VehicleInfo
+                    {
+                        Boot = new List<BootInfo>(),
+                        Plate = targetPlate,
+                    };
+                    TriggerClientEvent(player, "core:getVehicleByPlate", JsonConvert.SerializeObject(newVehicle));
+                }
             }
         }
+
+
 
         [EventHandler("core:showCardId")]
         public void ShowCardId([FromSource] Player player, int targetId)
@@ -937,7 +971,7 @@ namespace Core.Server
                     var updatedInventory = JsonConvert.SerializeObject(inventory);
                     existingPlayer.Inventory = updatedInventory;
                     dbContext.SaveChanges();
-                    GetPlayerData(player);
+                    UpdateInventory(player);
                 }
             }
         }
@@ -975,7 +1009,7 @@ namespace Core.Server
                     var updatedInventory = JsonConvert.SerializeObject(inventory);
                     existingPlayer.Inventory = updatedInventory;
                     dbContext.SaveChanges();
-                    GetPlayerData(player);
+                    UpdateInventory(player);
                 }
             }
         }
@@ -1004,7 +1038,7 @@ namespace Core.Server
                     var updatedInventory = JsonConvert.SerializeObject(inventory);
                     existingPlayer.Inventory = updatedInventory;
                     dbContext.SaveChanges();
-                    GetPlayerData(player);
+                    UpdateInventory(player);
                 }
             }
         }
@@ -1031,36 +1065,39 @@ namespace Core.Server
                                 var boot = vehicle.Boot;
                                 var itemBootFilter = boot.FirstOrDefault(i => i.Item == item);
                                 var itemFilter = inventory.FirstOrDefault(i => i.Item == item);
-
-                                if (itemBootFilter != null)
+                                if (quantity <= itemFilter.Quantity)
                                 {
-                                    itemBootFilter.Quantity += quantity;
-                                    itemFilter.Quantity -= quantity;
-                                    TriggerClientEvent(player, "core:sendNotif", $"Vous avez déposé ~r~{quantity}~w~ de {item}.");
-                                }
-                                else
-                                {
-                                    var newItem = new BootInfo
+                                    if (itemBootFilter != null)
                                     {
-                                        Item = item,
-                                        Quantity = quantity,
-                                        Type = type
-                                    };
+                                        itemBootFilter.Quantity += quantity;
+                                        itemFilter.Quantity -= quantity;
+                                        TriggerClientEvent(player, "core:sendNotif", $"Vous avez déposé ~r~{quantity}~w~ de {item}.");
+                                    }
+                                    else
+                                    {
+                                        var newItem = new BootInfo
+                                        {
+                                            Item = item,
+                                            Quantity = quantity,
+                                            Type = type
+                                        };
 
-                                    boot.Add(newItem);
-                                    TriggerClientEvent(player, "core:sendNotif", $"Vous avez déposé un nouvel article : {item}.\n~r~+{quantity}");
+                                        boot.Add(newItem);
+                                        TriggerClientEvent(player, "core:sendNotif", $"Vous avez déposé un nouvel article : {item}.\n~r~+{quantity}");
+                                    }
+                                    existingPlayer.Cars = JsonConvert.SerializeObject(vehicles);
+                                    existingPlayer.Inventory = JsonConvert.SerializeObject(inventory);
+                                    dbContext.SaveChanges();
+
+                                    UpdateInventory(player);
+                                    GetVehicleInfo(player);
+                                } else
+                                {
+                                    TriggerClientEvent("core:sendNotif", "~r~La quantité est trop importante");
                                 }
                             }
                         }
                     }
-
-                    var updatedCars = JsonConvert.SerializeObject(vehicles);
-                    var updatedInventory = JsonConvert.SerializeObject(inventory);
-                    existingPlayer.Cars = updatedCars;
-                    existingPlayer.Inventory = updatedInventory;
-                    dbContext.SaveChanges();
-                    GetPlayerData(player);
-                    GetVehicleInfo(player);
                 }
             }
         }
@@ -1097,13 +1134,32 @@ namespace Core.Server
                                         if (bootItem.Item == item && bootItem.Quantity >= quantity)
                                         {
                                             bootItem.Quantity -= quantity;
-                                            itemFilter.Quantity += quantity;
-
                                             if (bootItem.Quantity <= 0)
                                             {
                                                 boot.RemoveAt(i);
                                             }
 
+                                            if (itemFilter != null)
+                                            {
+                                                itemFilter.Quantity += quantity;
+                                            } else
+                                            {
+                                                var newItem = new ItemQuantity
+                                                {
+                                                    ItemType = bootItem.Type,
+                                                    Item = bootItem.Item,
+                                                    Quantity = quantity,
+                                                };
+                                                inventory.Add(newItem);
+                                            }
+
+                                            existingPlayer.Cars = JsonConvert.SerializeObject(vehicles);
+                                            existingPlayer.Inventory = JsonConvert.SerializeObject(inventory);
+                                            dbContext.SaveChanges();
+
+                                            TriggerClientEvent("core:sendNotif", $"Vous avez pris {quantity} de ~g~{bootItem.Item}");
+                                            UpdateInventory(player);
+                                            GetVehicleInfo(player);
                                             break;
                                         }
                                     }
@@ -1111,12 +1167,6 @@ namespace Core.Server
                             }
                         }
                     }
-
-                    var updatedCars = JsonConvert.SerializeObject(vehicles);
-                    existingPlayer.Cars = updatedCars;
-                    dbContext.SaveChanges();
-                    GetPlayerData(player);
-                    GetVehicleInfo(player);
                 }
             }
         }
@@ -1163,8 +1213,8 @@ namespace Core.Server
                         existingPlayer.Inventory = JsonConvert.SerializeObject(invPlayer);
                         existingTarget.Inventory = JsonConvert.SerializeObject(invTarget);
                         dbContext.SaveChanges();
-                        GetPlayerData(player);
-                        GetPlayerData(targetPlayer);
+                        UpdateInventory(player);
+                        UpdateInventory(targetPlayer);
                         TriggerClientEvent(player, "core:sendNotif", $"Vous avez donné {quantity} de {item}");
                     }
                 }
@@ -1200,7 +1250,7 @@ namespace Core.Server
                         var updatedInventory = JsonConvert.SerializeObject(inventory);
                         existingPlayer.Inventory = updatedInventory;
                         dbContext.SaveChanges();
-                        GetPlayerData(player);
+                        UpdateInventory(player);
                     }
                     else
                     {
@@ -1352,6 +1402,8 @@ namespace Core.Server
                 Debug.WriteLine("[Warning] Player not found.");
                 return;
             }
+            var route = GetPlayerRoutingBucket(targetPlayer.Handle);
+            SetPlayerRoutingBucket(source.Handle, route);
             source.Character.Position = targetPlayer.Character.Position;
         }
 
@@ -1377,7 +1429,7 @@ namespace Core.Server
                 return;
             }
             targetPlayer.Character.Position = new CitizenFX.Core.Vector3(1643.1f, 2570.2f, 45.5f);
-            TriggerClientEvent("core:sendNotif", $"~r~Vous êtes en jail\nRaison: ~s~{reason} ~r~durant ~s~{time}s");
+            TriggerClientEvent(targetPlayer, "core:sendNotif", $"~r~Vous êtes en jail\nRaison: ~s~{reason} ~r~durant ~s~{time}s");
         }
 
         [EventHandler("core:cuff")]
