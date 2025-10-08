@@ -13,9 +13,11 @@ namespace Core.Server
 
         public DbSet<PlayerTable> Player { get; set; }
         public DbSet<CompanyTable> Company { get; set; }
+        public DbSet<CarTable> Car { get; set; }
+        public DbSet<EmployementTable> Employement { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseMySql("server=localhost;database=fivem;user=root;password=");
+            optionsBuilder.UseMySql("server=localhost;database=fivem_mev;user=root;password=");
         }
     }
 
@@ -31,6 +33,32 @@ namespace Core.Server
         public string Chest { get; set; }
         [Column("taxes")]
         public string Taxes { get; set; }
+    }
+
+    [Table("car")]
+    public class CarTable
+    {
+        [Key]
+        [Column("id")]
+        public int Id { get; set; }
+        [Column("player_id")]
+        public int PlayerId { get; set; }
+        [Column("model")]
+        public string Model { get; set; }
+        [Column("plate")]
+        public string Plate { get; set; }
+        [Column("state")]
+        public string State { get; set; }
+        [Column("color_type")]
+        public int ColorType { get; set; }
+        [Column("primary_color")]
+        public int PrimaryColor { get; set; }
+        [Column("secondary_color")]
+        public int SecondaryColor { get; set; }
+        [Column("mods")]
+        public string Mods { get; set; }
+        [Column("boot")]
+        public string Boot { get; set; }
     }
 
     [Table("player")]
@@ -55,8 +83,6 @@ namespace Core.Server
         public string LastName { get; set; }
         [Column("rank")]
         public string Rank { get; set; }
-        [Column("job")]
-        public string Job { get; set; }
         [Column("organisation")]
         public string Organisation { get; set; }
         [Column("clothes")]
@@ -67,8 +93,6 @@ namespace Core.Server
         public int Money { get; set; }
         [Column("bills")]
         public string Bills { get; set; }
-        [Column("cars")]
-        public string Cars { get; set; }
         [Column("phone")]
         public string Phone { get; set; }
         [Column("inventory")]
@@ -79,4 +103,17 @@ namespace Core.Server
         public string LastPosition { get; set; }
     }
 
+    [Table("employment")]
+    public class EmployementTable
+    {
+        [Key]
+        [Column("id")]
+        public int Id { get; set; }
+        [Column("player_id")]
+        public int PlayerId { get; set; }
+        [Column("company_id")]
+        public int CompanyId { get; set; }
+        [Column("rank")]
+        public int Rank { get; set; }
+    }
 }
