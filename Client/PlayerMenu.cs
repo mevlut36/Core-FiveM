@@ -35,7 +35,7 @@ namespace Core.Client
 
         public PlayerInstance PlayerInst = new PlayerInstance
         {
-            Inventory = new List<ItemQuantity>(),
+            Inventory = new List<InventoryItem>(),
             Money = 0
         };
 
@@ -51,58 +51,58 @@ namespace Core.Client
                 var MainMenu = new NativeMenu("F5", "Menu personnel")
                 {
                     Visible = true,
-                    UseMouse = false
+                    MouseBehavior = MenuMouseBehavior.Disabled
                 };
                 var shopMenu = new NativeMenu("Boutique", "~o~Boutique")
                 {
-                    UseMouse = false
+                    MouseBehavior = MenuMouseBehavior.Disabled
                 };
                 var menuInfo = new NativeMenu("Informations", "Informations")
                 {
-                    UseMouse = false
+                    MouseBehavior = MenuMouseBehavior.Disabled
                 };
                 var inventoryMenu = new NativeMenu("Inventaire", "Inventaire")
                 {
-                    UseMouse = false
+                    MouseBehavior = MenuMouseBehavior.Disabled
                 };
                 var clothMenu = new NativeMenu("Vêtements", "Vêtements")
                 {
-                    UseMouse = false
+                    MouseBehavior = MenuMouseBehavior.Disabled
                 };
                 var billsMenu = new NativeMenu("Factures", "Factures")
                 {
-                    UseMouse = false
+                    MouseBehavior = MenuMouseBehavior.Disabled
                 };
                 var weaponsMenu = new NativeMenu("Armes", "Armes")
                 {
-                    UseMouse = false
+                    MouseBehavior = MenuMouseBehavior.Disabled
                 };
                 var playerList = new NativeMenu("Liste des joueurs", "Liste des joueurs")
                 {
-                    UseMouse = false
+                    MouseBehavior = MenuMouseBehavior.Disabled
                 };
                 var reportList = new NativeMenu("Liste des reports", "Liste des reports")
                 {
-                    UseMouse = false
+                    MouseBehavior = MenuMouseBehavior.Disabled
                 };
                 var vip = new NativeMenu("VIP", "VIP")
                 {
-                    UseMouse = false
+                    MouseBehavior = MenuMouseBehavior.Disabled
                 };
                 var carImport = new NativeMenu("Véhicules import", "Véhicules import")
                 {
-                    UseMouse = false
+                    MouseBehavior = MenuMouseBehavior.Disabled
                 };
                 var lootbox = new NativeMenu("Caisse du mois", "Caisse du mois")
                 {
-                    UseMouse = false
+                    MouseBehavior = MenuMouseBehavior.Disabled
                 };
                 if (PlayerInst.Rank == "staff")
                 {
                     BaseScript.TriggerServerEvent("core:getPlayersList");
                     var adminMenu = new NativeMenu("Administration", "~o~Administration")
                     {
-                        UseMouse = false
+                        MouseBehavior = MenuMouseBehavior.Disabled
                     };
                     Pool.Add(adminMenu);
                     MainMenu.AddSubMenu(adminMenu);
@@ -118,7 +118,7 @@ namespace Core.Client
                         var playerMenu = new NativeMenu($"", $"{handle} | {playerInst.Firstname} {playerInst.Lastname}",
                         $"ID: {handle}\nDB ID: {playerInst.Id}\nDiscord: {playerInst.Discord}\nJob: {job.JobID} | {job.JobRank}\nOrga: {playerInst.Organisation}\nRank: {playerInst.Rank}\nBitcoin: {playerInst.Bitcoin}\nMoney: {playerInst.Money}")
                         {
-                            UseMouse = false
+                            MouseBehavior = MenuMouseBehavior.Disabled
                         };
                         var reviveP = new NativeItem("Revive", "Réanimer le joueur");
                         reviveP.Activated += (sender, e) =>
@@ -379,7 +379,7 @@ namespace Core.Client
                     {
                         foreach (var item in items)
                         {
-                            if (item != null && item.ItemType == "item" && item.Quantity != 0)
+                            if (item != null && item.Type == "item" && item.Quantity != 0)
                             {
                                 var invItem = new NativeListItem<string>($"{item.Item} ({item.Quantity})", "", "Utiliser", "Donner");
                                 inventoryMenu.Add(invItem);
@@ -479,7 +479,7 @@ namespace Core.Client
                             }
 
 
-                            if (weapon.Item != null && weapon.ItemType == "weapon")
+                            if (weapon.Item != null && weapon.Type == "weapon")
                             {
                                 var weaponItem = new NativeListItem<string>($"{weapon.Item}", "", "Équiper", "Déséquiper");
                                 weaponsMenu.Add(weaponItem);
@@ -586,6 +586,10 @@ namespace Core.Client
                 };
 
                 BaseScript.TriggerServerEvent("core:sendVehicleInfo", JsonConvert.SerializeObject(info));
+                BaseScript.Delay(1000).ContinueWith(_ =>
+                {
+                    BaseScript.TriggerServerEvent("core:getVehicleInfo");
+                });
             }
             else
             {

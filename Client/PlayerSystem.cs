@@ -61,7 +61,7 @@ namespace Core.Client
             var menu = new NativeMenu("Création")
             {
                 Visible = true,
-                UseMouse = false,
+                MouseBehavior = MenuMouseBehavior.Disabled,
                 AcceptsInput = true
             };
 
@@ -155,7 +155,7 @@ namespace Core.Client
                     PlayerRegister.Firstname = firstname;
                     PlayerRegister.Lastname = lastname;
                     PlayerRegister.Birth = birth;
-                    PlayerRegister.Inventory = new List<ItemQuantity>();
+                    PlayerRegister.Inventory = new List<InventoryItem>();
                     PlayerRegister.Bills = "[]";
                     SkintonMenu();
                 }
@@ -183,7 +183,7 @@ namespace Core.Client
             var menu = new NativeMenu("Skin", "Skin maker")
             {
                 Visible = true,
-                UseMouse = false,
+                MouseBehavior = MenuMouseBehavior.Disabled,
                 HeldTime = 100
             };
             Pool.Add(menu);
@@ -344,7 +344,7 @@ namespace Core.Client
             var clothesList = new List<ClothingSet>();
             var menu = new NativeMenu("Magasin de vêtements", $"Choisissez vos vêtements")
             {
-                UseMouse = false,
+                MouseBehavior = MenuMouseBehavior.Disabled,
                 HeldTime = 100
             };
             Pool.Add(menu);

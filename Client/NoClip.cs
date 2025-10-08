@@ -192,7 +192,6 @@ namespace Core.Client
                 SetEveryoneIgnorePlayer(Game.PlayerPed.Handle, true);
                 SetPoliceIgnorePlayer(Game.PlayerPed.Handle, true);
 
-                // After the next game tick, reset the entity properties.
                 await Delay(0);
                 FreezeEntityPosition(noclipEntity, false);
                 SetEntityInvincible(noclipEntity, false);

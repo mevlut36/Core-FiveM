@@ -1,4 +1,4 @@
-using CitizenFX.Core;
+ï»¿using CitizenFX.Core;
 using CitizenFX.Core.Native;
 using CitizenFX.Core.NaturalMotion;
 using LemonUI;
@@ -85,7 +85,7 @@ namespace Core.Client
             RegisterCommand("report", new Action<int, List<object>, string>((source, args, raw) =>
             {
                 string arguments = string.Join(" ", args);
-                Format.ShowAdvancedNotification("ShurikenRP", "Admin Sys.", "~g~Votre report a bien été envoyer, veuillez patienter");
+                Format.ShowAdvancedNotification("ShurikenRP", "Admin Sys.", "~g~Votre report a bien Ã©tÃ© envoyer, veuillez patienter");
                 var newReport = new ReportClass
                 {
                     Player = PlayerMenu.PlayerInst,
@@ -113,16 +113,16 @@ namespace Core.Client
 
             Tick += ScenarioSuppressionLoop;
 
-            var item1 = new LTDItems("Ordinateur", "Idéal pour faire du pentest...", 15000);
+            var item1 = new LTDItems("Ordinateur", "IdÃ©al pour faire du pentest...", 15000, "ðŸ“±", "Ã‰lectronique");
             NarcoItems.Add(item1);
 
-            var item2 = new LTDItems("Perceuse", "Idéale pour percer une porte...", 10000);
+            var item2 = new LTDItems("Perceuse", "IdÃ©ale pour percer une porte...", 10000, "ðŸ“±", "Ã‰lectronique");
             NarcoItems.Add(item2);
 
-            var item3 = new LTDItems("Phone", "Excellent téléphone", 1500);
+            var item3 = new LTDItems("Phone", "Excellent tÃ©lÃ©phone", 1500, "ðŸ“±", "Ã‰lectronique");
             NarcoItems.Add(item3);
             
-            var item4 = new LTDItems("Outil de crochetage", "En cas de panne", 1000);
+            var item4 = new LTDItems("Outil de crochetage", "En cas de panne", 1000, "ðŸ”¥", "Ã‰lectronique");
             NarcoItems.Add(item4);
         }
 
@@ -261,12 +261,11 @@ namespace Core.Client
                                 {
                                     SetPedPropIndex(GetPlayerPed(-1), component.ComponentId, component.Drawable, component.Texture, false);
                                 }
-
                             }
                         }
                     }
-                } 
-                
+                }
+
                 SetPedComponentVariation(LocalPlayer.Character.Handle, 2, skin.Hair, skin.HairColor, 0);
                 SetPedHairColor(LocalPlayer.Character.Handle, skin.HairColor, 1);
                 SetPedHeadBlendData(LocalPlayer.Character.Handle, skin.Mom, skin.Dad, skin.Dad, skin.Mom, skin.Dad, skin.Dad, skin.DadMomPercent * 0.1f, skin.DadMomPercent * 0.1f, 1.0f, false);
@@ -277,12 +276,10 @@ namespace Core.Client
                 SetPedHeadOverlayColor(LocalPlayer.Character.Handle, 1, 1, 1, 1);
                 SetPedHeadOverlayColor(LocalPlayer.Character.Handle, 2, 1, skin.EyebrowOpacity, skin.EyebrowOpacity);
                 Game.PlayerPed.Position = PlayerMenu.PlayerInst.LastPosition;
-                // PlayerMenu.PlayerInst.Cars = PlayerMenu.PlayerInst.Cars;
-                var vehicles = JsonConvert.DeserializeObject<List<VehicleInfo>>(player.Cars);
-                if (vehicles != null && vehicles.Count > 0)
-                {
-                    Parking.CarList = vehicles;
-                }
+
+                // Request vehicles from server (now using car table)
+                TriggerServerEvent("core:getVehicleInfo");
+
                 var job = JsonConvert.DeserializeObject<JobInfo>(PlayerMenu.PlayerInst.Job);
                 if (job.JobID != "0")
                 {
@@ -292,7 +289,6 @@ namespace Core.Client
             catch (JsonSerializationException ex)
             {
                 Debug.WriteLine($"Error deserializing JSON: {ex.Message}");
-                // Debug.WriteLine($"JSON: {json}");
             }
         }
 
@@ -373,13 +369,13 @@ namespace Core.Client
                 var remainingTime = TimeSpan.FromMinutes(10) - (DateTime.UtcNow - DeathTime);
                 var totalMinutes = Math.Round(remainingTime.TotalMinutes);
 
-                Format.SendTextUI($"~r~Vous êtes mort\nRéappartion possible dans {totalMinutes}min");
+                Format.SendTextUI($"~r~Vous Ãªtes mort\nRÃ©appartion possible dans {totalMinutes}min");
 
                 if (GetEntityHealth(GetPlayerPed(1)) < 200)
                 {
                     if (DateTime.UtcNow - DeathTime >= TimeSpan.FromMinutes(5))
                     {
-                        Format.SendTextUI($"\n\n~r~! Réappartion avancée, appuyer sur ~g~E~r~, coût: ~g~$10000 ~r~!");
+                        Format.SendTextUI($"\n\n~r~! RÃ©appartion avancÃ©e, appuyer sur ~g~E~r~, coÃ»t: ~g~$10000 ~r~!");
 
                         if (PlayerMenu.PlayerInst.Money >= 10000)
                         {
@@ -429,12 +425,23 @@ namespace Core.Client
             SetBlockingOfNonTemporaryEvents(ped.Result.Handle, true);
         }
 
-        [EventHandler("core:updateVehicles")]
-        public void UpdateVehicles(string json)
+        [EventHandler("core:sendVehicleInfos")]
+        public void ReceiveVehicleInfos(string json)
         {
-            var cars = JsonConvert.DeserializeObject<List<VehicleInfo>>(PlayerMenu.PlayerInst.Cars);
-            var car = JsonConvert.DeserializeObject<VehicleInfo>(json);
-            Parking.CarList.Add(car);
+            try
+            {
+                var vehicles = JsonConvert.DeserializeObject<List<VehicleInfo>>(json);
+                if (vehicles != null)
+                {
+                    Parking.CarList.Clear();
+                    Parking.CarList.AddRange(vehicles);
+                    Debug.WriteLine($"Loaded {vehicles.Count} vehicles for player");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error loading vehicles: {ex.Message}");
+            }
         }
 
         public void NarcoMenu()
@@ -453,7 +460,7 @@ namespace Core.Client
                 {
                     var menu = new NativeMenu("Pablo", $"Chut")
                     {
-                        UseMouse = false
+                        MouseBehavior = MenuMouseBehavior.Disabled
                     };
                     Pool.Add(menu);
                     menu.Visible = true;
@@ -467,7 +474,7 @@ namespace Core.Client
                         menu.Add(_);
                         _.Activated += async (sender, e) =>
                         {
-                            var textInput = await Format.GetUserInput("Quantité", "1", 4);
+                            var textInput = await Format.GetUserInput("QuantitÃ©", "1", 4);
                             var parsedInput = Int32.Parse(textInput);
                             var result = item.Price * parsedInput;
                             if (result <= PlayerMenu.PlayerInst.Money)
@@ -479,7 +486,7 @@ namespace Core.Client
                             }
                             else
                             {
-                                Format.ShowAdvancedNotification("ShurikenRP", "Illegal Sys.", "~r~La somme est trop élevée");
+                                Format.ShowAdvancedNotification("ShurikenRP", "Illegal Sys.", "~r~La somme est trop Ã©levÃ©e");
                             }
 
                         };
@@ -556,7 +563,7 @@ namespace Core.Client
 
         public void UpdateInventory(string json)
         {
-            var inventory = JsonConvert.DeserializeObject<List<ItemQuantity>>(json);
+            var inventory = JsonConvert.DeserializeObject<List<InventoryItem>>(json);
             PlayerMenu.PlayerInst.Inventory = inventory;
         }
     }

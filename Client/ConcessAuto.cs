@@ -107,7 +107,7 @@ namespace Core.Client
                 var menu = new NativeMenu("Prévisualisation")
                 {
                     Visible = true,
-                    UseMouse = false
+                    MouseBehavior = MenuMouseBehavior.Disabled
                 };
                 Pool.Add(menu);
 
@@ -195,7 +195,7 @@ namespace Core.Client
             {
                 var mainMenu = new NativeMenu("Catalogue", "Bienvenue sur le catalogue")
                 {
-                    UseMouse = false,
+                    MouseBehavior = MenuMouseBehavior.Disabled,
                     HeldTime = 100
                 };
                 var vehicleNames = System.Enum.GetNames(typeof(VehicleHash));
@@ -227,7 +227,7 @@ namespace Core.Client
                     var className = GetVehicleClassName(vehicleClass);
                     var classMenu = new NativeMenu(className, className)
                     {
-                        UseMouse = false
+                        MouseBehavior = MenuMouseBehavior.Disabled
                     };
                     mainMenu.AddSubMenu(classMenu);
 

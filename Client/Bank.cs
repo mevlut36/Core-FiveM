@@ -78,7 +78,7 @@ namespace Core.Client
                     {
                         var menu = new NativeMenu("Banque", "Bienvenue")
                         {
-                            UseMouse = false
+                            MouseBehavior = MenuMouseBehavior.Disabled
                         };
                         Pool.Add(menu);
                         menu.Visible = true;
@@ -154,11 +154,11 @@ namespace Core.Client
                     {
                         var menu = new NativeMenu("Banque", "Braquage")
                         {
-                            UseMouse = false
+                            MouseBehavior = MenuMouseBehavior.Disabled
                         };
                         Pool.Add(menu);
                         menu.Visible = true;
-                        menu.UseMouse = false;
+                        menu.MouseBehavior = MenuMouseBehavior.Disabled;
                         var robbery = new NativeItem("Démarrer le ~r~braquage", "<b>Outils nécessaires:</b> \n- Ordinateur\n- Perceuse");
                         menu.Add(robbery);
                         robbery.Activated += async (sender, e) =>

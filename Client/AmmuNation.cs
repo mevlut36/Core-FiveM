@@ -69,7 +69,7 @@ namespace Core.Client
                     {
                         var menu = new NativeMenu("Ammu-Nation", "Acheter vos armes")
                         {
-                            UseMouse = false
+                            MouseBehavior = MenuMouseBehavior.Disabled
                         };
                         Pool.Add(menu);
                         var weapon_dict = new Dictionary<string, Dictionary<WeaponHash, int>>();
@@ -109,7 +109,7 @@ namespace Core.Client
                                     }
                                 };
                                 menu.Visible = true;
-                                menu.UseMouse = false;
+                                menu.MouseBehavior = MenuMouseBehavior.Disabled;
                             }
                         }
                         var ammo = new NativeItem("Munitions", "", "~g~$200");

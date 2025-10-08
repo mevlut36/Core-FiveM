@@ -33,7 +33,7 @@ namespace Core.Client
             Format.SetMarker(Point, MarkerType.ChevronUpx1);
             var menu = new NativeMenu("Container", "Container")
             {
-                UseMouse = false
+                MouseBehavior = MenuMouseBehavior.Disabled
             };
             Pool.Add(menu);
 
@@ -74,12 +74,12 @@ namespace Core.Client
                     Format.SetMarker(Point, MarkerType.ChevronUpx1);
                     var menu = new NativeMenu("Container", "Container")
                     {
-                        UseMouse = false
+                        MouseBehavior = MenuMouseBehavior.Disabled
                     };
                     Pool.Add(menu);
                     var openContainer = new NativeMenu("Votre container", "Votre container")
                     {
-                        UseMouse = false
+                        MouseBehavior = MenuMouseBehavior.Disabled
                     };
                     Pool.Add(openContainer);
                     Format.SendTextUI("~w~Cliquer sur ~r~E ~w~ pour ouvrir");
