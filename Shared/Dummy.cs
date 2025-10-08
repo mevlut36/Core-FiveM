@@ -98,6 +98,7 @@ namespace Core.Shared
 
     public class PlayerInstance
     {
+        public string License { get; set; }
         public int Id { get; set; }
         public string State { get; set; }
         public string Discord { get; set; }
@@ -106,23 +107,47 @@ namespace Core.Shared
         public string Lastname { get; set; }
         public string Rank { get; set; }
         public string Job { get; set; }
-        public string Organisation { get; set; }
-        public int Bitcoin { get; set; }
         public string Cars { get; set; }
+        public int Bitcoin { get; set; }
         public string Birth { get; set; }
-        public List<ClothesInfo> Clothes { get; set; }
+        public List<ClothingSet> Clothes { get; set; }
+        public string Organisation { get; set; }
         public string ClothesList { get; set; }
         public int Money { get; set; }
         public string Bills { get; set; }
-        public string Inventory { get; set; }
+        public List<InventoryItem> Inventory { get; set; }
         public Vector3 LastPosition { get; set; }
+    }
+
+    public class InventoryItem
+    {
+        [JsonProperty("type")]
+        public string Type { get; set; }
+
+        [JsonProperty("item")]
+        public string Item { get; set; }
+
+        private int quantity;
+        [JsonProperty("quantity")]
+        public virtual int Quantity
+        {
+            get => quantity;
+            set => quantity = value;
+        }
+    }
+    public class PlayerGangInfo
+    {
+        [JsonProperty("id")]
+        public int GangID { get; set; }
+        [JsonProperty("rank")]
+        public int GangRank { get; set; }
     }
 
     public class CompanyInstance
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public List<ItemQuantity> Chest { get; set; }
+        public List<InventoryItem> Chest { get; set; }
         public string Taxes { get; set; }
     }
 
@@ -169,11 +194,16 @@ namespace Core.Shared
         public string Name { get; set; }
         public string Description { get; set; }
         public int Price { get; set; }
-        public LTDItems(string name, string description, int price)
+        public string Icon { get; set; }
+        public string Category { get; set; }
+
+        public LTDItems(string name, string description, int price, string icon, string category)
         {
             Name = name;
             Description = description;
             Price = price;
+            Icon = icon;
+            Category = category;
         }
     }
 
@@ -308,6 +338,47 @@ namespace Core.Shared
         public int Door_R { get; set; }
         public int LiveryMod { get; set; }
         public int LightBar { get; set; }
+    }
+
+    public class ClothingSet
+    {
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("components")]
+        public List<ClothesComponent> Components { get; set; } = new List<ClothesComponent>();
+    }
+
+    public class ClothesComponent
+    {
+        [JsonProperty("componentId")]
+        public int ComponentId { get; private set; }
+
+        [JsonProperty("drawable")]
+        public int Drawable { get; set; }
+
+        [JsonProperty("texture")]
+        public int Texture { get; set; }
+
+        [JsonProperty("palette")]
+        public int Palette { get; set; }
+
+        public ClothesComponent(int componentId)
+        {
+            ComponentId = componentId;
+        }
+    }
+
+    public enum NotificationType : int
+    {
+        Default = 0,
+        Bubble = 1,
+        Mail = 2,
+        FriendRequest = 3,
+        Default2 = 4,
+        Reply = 7,
+        ReputationPoints = 8,
+        Money = 9
     }
 
 }
