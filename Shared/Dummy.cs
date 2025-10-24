@@ -28,7 +28,7 @@ namespace Core.Shared
     class JobInfo
     {
         [JsonProperty("id")]
-        public string JobID { get; set; }
+        public int JobID { get; set; }
         [JsonProperty("rank")]
         public int JobRank { get; set; }
     }
