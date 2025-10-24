@@ -1,0 +1,13 @@
+C:\Users\mevlu\source\repos\Core\Client\obj\Debug\net452\Core.Client.csproj.AssemblyReference.cache
+C:\Users\mevlu\source\repos\Core\Client\obj\Debug\net452\Core.Client.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\mevlu\source\repos\Core\Client\obj\Debug\net452\Core.Client.AssemblyInfoInputs.cache
+C:\Users\mevlu\source\repos\Core\Client\obj\Debug\net452\Core.Client.AssemblyInfo.cs
+C:\Users\mevlu\source\repos\Core\Client\obj\Debug\net452\Core.Client.csproj.CoreCompileInputs.cache
+C:\Users\mevlu\source\repos\Core\Client\bin\Debug\net452\Core.Client.net.dll
+C:\Users\mevlu\source\repos\Core\Client\bin\Debug\net452\CitizenFX.Core.Client.dll
+C:\Users\mevlu\source\repos\Core\Client\bin\Debug\net452\LemonUI.FiveM.dll
+C:\Users\mevlu\source\repos\Core\Client\bin\Debug\net452\Newtonsoft.Json.dll
+C:\Users\mevlu\source\repos\Core\Client\bin\Debug\net452\System.ValueTuple.dll
+C:\Users\mevlu\source\repos\Core\Client\bin\Debug\net452\Newtonsoft.Json.xml
+C:\Users\mevlu\source\repos\Core\Client\obj\Debug\net452\Core.Cli.4A449D82.Up2Date
+C:\Users\mevlu\source\repos\Core\Client\obj\Debug\net452\Core.Client.net.dll

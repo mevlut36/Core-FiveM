@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "dgSpecHash": "6yRrIOMNQig=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\mevlu\\source\\repos\\Core\\Client\\Core.Client.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\mevlu\\.nuget\\packages\\citizenfx.core.client\\1.0.20664\\citizenfx.core.client.1.0.20664.nupkg.sha512",
+    "C:\\Users\\mevlu\\.nuget\\packages\\lemonui.fivem\\2.2.0\\lemonui.fivem.2.2.0.nupkg.sha512",
+    "C:\\Users\\mevlu\\.nuget\\packages\\microsoft.netframework.referenceassemblies\\1.0.3\\microsoft.netframework.referenceassemblies.1.0.3.nupkg.sha512",
+    "C:\\Users\\mevlu\\.nuget\\packages\\microsoft.netframework.referenceassemblies.net452\\1.0.3\\microsoft.netframework.referenceassemblies.net452.1.0.3.nupkg.sha512",
+    "C:\\Users\\mevlu\\.nuget\\packages\\newtonsoft.json\\12.0.2\\newtonsoft.json.12.0.2.nupkg.sha512",
+    "C:\\Users\\mevlu\\.nuget\\packages\\system.valuetuple\\4.5.0\\system.valuetuple.4.5.0.nupkg.sha512",
+    "C:\\Users\\mevlu\\.nuget\\packages\\citizenfx.framework.client\\0.2.3\\citizenfx.framework.client.0.2.3.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Le package 'Newtonsoft.Json' 12.0.2 présente une vulnérabilité de gravité élevé(e) connue, https://github.com/advisories/GHSA-5crp-9r3c-p9vr.",
+      "projectPath": "C:\\Users\\mevlu\\source\\repos\\Core\\Client\\Core.Client.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\mevlu\\source\\repos\\Core\\Client\\Core.Client.csproj",
+      "libraryId": "Newtonsoft.Json",
+      "targetGraphs": [
+        ".NETFramework,Version=v4.5.2"
+      ]
+    }
+  ]
+}
