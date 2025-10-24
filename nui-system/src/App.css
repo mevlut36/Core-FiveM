@@ -1,0 +1,19 @@
+/* src/App.css */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background: transparent !important; 
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden;
+  background: transparent !important; 
+}
+
+.app {
+  width: 100vw;
+  height: 100vh;
+  background: transparent !important; 
+}
